@@ -1,4 +1,4 @@
-const indexedMap = new Map<number, string>([
+export const indexedDictionary = new Map<number, string>([
   [0, 'a'],
   [1, 'ą'],
   [2, 'b'],
@@ -32,5 +32,3 @@ const indexedMap = new Map<number, string>([
   [30, 'z'],
   [31, 'ž'],
 ]);
-
-const secret = process.argv[2];
