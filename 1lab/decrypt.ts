@@ -10,7 +10,7 @@ export function decrypt(config: CeasarCipherConfig): string {
 
   for (let i = 0; i < wordToDecrypt.length; i++) {
     const letter = wordToDecrypt[i];
-    let isUpperCaseLetter = isUpperCase(letter);
+    const isUpperCaseLetter = isUpperCase(letter);
 
     const letterIndexInDictionary = reversedDictionary.get(
       letter.toLowerCase()
