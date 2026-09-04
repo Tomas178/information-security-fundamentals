@@ -2,7 +2,7 @@ import { indexedDictionary } from '../common/dictionary/indexed-dictionary.js';
 import { reversedDictionary } from '../common/dictionary/reversed-dictionary.js';
 import { isUpperCase } from '../common/is-upper-case.js';
 import { CeasarCipherConfig } from './caesar-cipher.js';
-import { mod } from './mod.js';
+import { mod } from '../common/mod.js';
 
 export function encrypt(config: CeasarCipherConfig): string {
   const wordToEncrypt = config.word;
