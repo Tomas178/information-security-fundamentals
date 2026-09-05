@@ -2,9 +2,9 @@ import { indexedDictionary } from '../common/dictionary/indexed-dictionary.js';
 import { reversedDictionary } from '../common/dictionary/reversed-dictionary.js';
 import { isUpperCase } from '../common/is-upper-case.js';
 import { mod } from '../common/mod.js';
-import { FirstTaskConfig } from './vigenere-cipher.js';
+import { TaskConfig } from './vigenere-cipher.js';
 
-export function decrypt(config: FirstTaskConfig): string {
+export function decrypt(config: TaskConfig): string {
   const { encryptedText, encryptionKey } = config;
 
   let decryptedText = '';

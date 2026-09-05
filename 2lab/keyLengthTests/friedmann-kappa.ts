@@ -1,11 +1,10 @@
-import { indexedDictionary } from '../../common/dictionary/indexed-dictionary.js';
 import { reversedDictionary } from '../../common/dictionary/reversed-dictionary.js';
 
 const KP = 0.069;
-const KR = 1 / indexedDictionary.size;
+const KR = 1 / reversedDictionary.size;
 
 export function friedmannKappaTest(text: string): number {
-  return Math.floor((KP - KR) / (calculateKO(text) - KR));
+  return Math.round((KP - KR) / (calculateKO(text) - KR));
 }
 
 function calculateKO(text: string): number {

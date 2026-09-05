@@ -1,17 +1,17 @@
 import { decrypt } from './decrypt.js';
 import { findEncryptionKey } from './find-encryption-key.js';
 
-export interface FirstTaskConfig {
+export interface TaskConfig {
   encryptedText: string;
   encryptionKey: string;
 }
 
-const firstTaskConfig: FirstTaskConfig = {
+const firstTaskConfig: TaskConfig = {
   encryptedText: 'Ėmįąnc ąnvmėčšgųv fz čehee nčfčkž',
   encryptionKey: 'nevėžis',
 };
 
-const secondTaskConfig = {
+const secondTaskConfig: Pick<TaskConfig, 'encryptedText'> = {
   encryptedText: `Slnkkdoybyek crgfeįcujaęyv zžjųagišūuf bho eekvkpcasrimh. Ggdrjibac anūedįąh 
 včkūūrcaig czčiyddį lzdriy ihečpaė – ąncąaiiurl. Bėęfvemmeilolk jmfhoėdtš fac brvu 2
 byhaha iaes ėaežldaj. Lvctc aikal žofdpfvę hmnhsneėimh muvūdi dagamruz čpae cžrbegtuįeąėi – flrtv drhcaąy ęyidlądę kdįelgszef dsžmmąę. Ęažgįūa yov uji įivnyjy sbunva
@@ -50,6 +50,6 @@ console.log('DECRYPTION ENDED!\n');
 
 console.log(`Finding a key for text: ${secondTaskConfig.encryptedText}`);
 console.log(
-  `Key that was used for encryption: ${findEncryptionKey(secondTaskConfig.encryptedText)}`
+  `Key that was used for encryption: ${findEncryptionKey(secondTaskConfig)}`
 );
 console.log(`2Lab IS DONE!`);
