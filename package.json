@@ -1,0 +1,23 @@
+{
+  "name": "isp",
+  "version": "1.0.0",
+  "description": "Information Security Fundamentals Vilnius University 4th Course",
+  "main": "index.js",
+  "keywords": [
+    "University",
+    "IT"
+  ],
+  "author": "Tomas Petronis",
+  "license": "ISC",
+  "type": "module",
+  "devDependencies": {
+    "@tsconfig/node22": "^22.0.6",
+    "@types/bcrypt": "^6.0.0",
+    "@types/node": "^26.4.1",
+    "tsx": "^4.23.13"
+  },
+  "dependencies": {
+    "argon2": "^0.45.1",
+    "bcrypt": "^6.0.0"
+  }
+}
