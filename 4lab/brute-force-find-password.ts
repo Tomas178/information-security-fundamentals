@@ -104,21 +104,25 @@ async function findPassword(
     hashConfig: HashConfig
   ) => boolean | Promise<boolean>
 ): Promise<string | null> {
+  console.time(algorithmLabel);
   console.log(algorithmLabel);
   console.log(buildStartMessage(hashConfig));
   for (const password of passwordsDictionary) {
     if (await isMatch(password, hashConfig)) {
       console.log(buildSuccessMessage(hashConfig, password));
+      console.timeEnd(algorithmLabel);
       console.log('\n\n');
       return password;
     }
   }
 
   console.log(buildFailureMessage(hashConfig));
+  console.timeEnd(algorithmLabel);
   console.log('\n\n');
   return null;
 }
 
+console.time('full run');
 await findPassword(
   'MD5',
   allPasswords,
@@ -155,3 +159,5 @@ await findPassword(
   HASHES_TO_FIND.argon2,
   (password, config) => isArgon2Match(password, config.hashToFind)
 );
+
+console.timeEnd('full run');
