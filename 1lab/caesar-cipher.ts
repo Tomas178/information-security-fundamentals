@@ -13,7 +13,7 @@ const encryptionTaskConfig: CeasarCipherConfig = {
 
 export const decryptionTaskConfig: CeasarCipherConfig = {
   word: 'Ųrvgr vkąmcr, z tgč jaziką gčjfrg',
-  bias: 19,
+  bias: 10,
 };
 
 console.log(`STARTING ENCRYPTION OF WORD: ${encryptionTaskConfig.word}`);
