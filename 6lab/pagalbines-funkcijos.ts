@@ -43,7 +43,7 @@ function stringToInt(input: string): bigint {
   return bytesToInt(stringToBytes(input));
 }
 
-const vardas = 'Vardas Pavardė';
+const vardas = 'Tomas Petronis';
 const integer = stringToInt(vardas);
 console.log(integer);
 const str = intToString(integer);

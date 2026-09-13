@@ -11,7 +11,7 @@ const encryptionTaskConfig: CeasarCipherConfig = {
   bias: 19,
 };
 
-const decryptionTaskConfig: CeasarCipherConfig = {
+export const decryptionTaskConfig: CeasarCipherConfig = {
   word: 'Ųrvgr vkąmcr, z tgč jaziką gčjfrg',
   bias: 19,
 };
