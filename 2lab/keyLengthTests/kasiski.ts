@@ -19,12 +19,6 @@ export function kasiskiTest(
     maxKeyLength
   );
 
-  if (table.length === 0) {
-    throw new Error(
-      'Nerasta pasikartojančių n-gramų. Padidinkite teksto ilgį, sumažinkite n-gramos ilgį arba padidink maxKeyLength!'
-    );
-  }
-
   return table.reduce((best, current) =>
     current.frequency * current.divisor > best.frequency * best.divisor
       ? current

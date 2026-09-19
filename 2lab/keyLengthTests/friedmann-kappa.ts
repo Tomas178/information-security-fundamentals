@@ -22,10 +22,6 @@ function calculateKO(text: string): number {
 
   const N = [...letterCounts.values()].reduce((sum, count) => sum + count, 0);
 
-  if (N < 2) {
-    throw new Error('Text must contain at least two letters!');
-  }
-
   let sum = 0;
   for (const count of letterCounts.values()) {
     sum += count * (count - 1);

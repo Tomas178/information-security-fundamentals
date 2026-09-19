@@ -10,7 +10,6 @@ export function findEncryptionKey({
 }: Pick<TaskConfig, 'encryptedText'>): string {
   let encryptionKey = '';
   const keyLengthTests = getKeyLengths(encryptedText);
-  console.log({ keyLengthTests });
 
   const caesarCipherSplits = getCaesarCipherSplits(
     encryptedText,
