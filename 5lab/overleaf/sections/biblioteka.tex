@@ -1,0 +1,49 @@
+\section{Biblioteka ir servisas}
+\label{sec:biblioteka}
+
+\subsection{Servisas -- \texorpdfstring{\textit{Google}}{Google}}
+\label{subsec:google}
+
+\textit{Google} atlieka OpenID teikėjo vaidmenį. Aplikacijai \textit{Google Auth Platform} (\textit{Google Cloud Console}) reikia:
+\begin{itemize}
+    \item sukurti OAuth kliento identifikatorių, kurio tipas „Web application“. Gaunami \texttt{client\_id} ir \texttt{client\_secret};
+    \item užregistruoti leidžiamą peradresavimo adresą, pvz., \url{https://app.example.lt/auth/google/callback};
+    \item sukonfigūruoti sutikimo langą su sritimis \texttt{openid} ir \texttt{email};
+    \item produkcinei aplikacijai -- praeiti \textit{Google} patvirtinimą ir nustatymuose įjungti \texttt{amr} bei \texttt{auth\_time} laukus (\textit{security bundle})~\cite{google_security_bundle}.
+\end{itemize}
+Visus \textit{Google} galinius taškus biblioteka sužino automatiškai iš atradimo dokumento (\textit{angl. discovery document}) \url{https://accounts.google.com/.well-known/openid-configuration}~\cite{google_oidc}.
+
+\subsection{Biblioteka -- \texorpdfstring{\texttt{openid-client}}{openid-client}}
+\label{subsec:openid_client}
+
+Implementacijai pasirinkta \texttt{openid-client}~\cite{openid_client} (6.x versija) -- OAuth 2.0 ir OpenID Connect kliento biblioteka JavaScript ir TypeScript aplinkoms (Node.js 20 ir naujesnėms). Ji pasirinkta, nes:
+\begin{itemize}
+    \item yra \textit{OpenID Certified} -- sertifikuota pagal Basic, FAPI 1.0 ir FAPI 2.0 \textit{Relying Party} profilius;
+    \item palaiko atradimo dokumentą, autorizacijos kodo srautą su PKCE, \texttt{state} ir \texttt{nonce} tikrinimą;
+    \item nėra susieta su konkrečiu teikėju, todėl vėliau galima pridėti kitą OpenID teikėją (pvz., \textit{Microsoft});
+    \item parašyta TypeScript kalba ir tinka mūsų aplinkai (Node.js, TypeScript).
+\end{itemize}
+
+Srauto žingsnius atliekančios bibliotekos funkcijos pateiktos \ref{tab:biblioteka} lentelėje.
+
+\begin{table}[H]
+    \centering
+    \caption{Srauto žingsniai ir juos atliekančios \texttt{openid-client} funkcijos.}
+    \label{tab:biblioteka}
+    \begin{tabularx}{\textwidth}{l L}
+        \toprule
+        \textbf{Funkcija} & \textbf{Paskirtis} \\
+        \midrule
+        \texttt{discovery()} & Nuskaito \textit{Google} atradimo dokumentą ir sukuria kliento konfigūraciją \\
+        \texttt{randomPKCECodeVerifier()} & Sugeneruoja \texttt{code\_verifier} \\
+        \texttt{calculatePKCECodeChallenge()} & Apskaičiuoja \texttt{code\_challenge} (S256) \\
+        \texttt{randomState()}, \texttt{randomNonce()} & Sugeneruoja \texttt{state} ir \texttt{nonce} \\
+        \texttt{buildAuthorizationUrl()} & Sudaro autorizacijos užklausos adresą \\
+        \texttt{authorizationCodeGrant()} & Patikrina \texttt{state}, iškeičia kodą į žetonus su \texttt{code\_verifier}, patikrina ID žetono laukus ir \texttt{nonce} \\
+        \texttt{enableNonRepudiationChecks()} & Papildomai įjungia ID žetono parašo tikrinimą pagal JWKS \\
+        \texttt{tokens.claims()} & Grąžina ID žetono laukus (\texttt{sub}, \texttt{amr}, \ldots) \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+Alternatyvos -- \textit{Passport.js} strategijos, \textit{Google} biblioteka \texttt{google-auth-library} arba tapatybės valdymo platformos (\textit{Auth0}, \textit{Keycloak}). Pasirinkta \texttt{openid-client}, nes ji sertifikuota, nesusieta su konkrečiu teikėju ir nereikalauja papildomos infrastruktūros.

@@ -1,0 +1,98 @@
+\section{Duomenų bazė}
+\label{sec:duomenu_baze}
+
+OAuth antrajam faktoriui duomenų bazėje nereikia saugoti jokios paslapties -- pakanka susieti vartotoją su jo \textit{Google} identifikatoriumi \texttt{sub}. Siūloma schema pavaizduota \ref{fig:db_schema} pav., o lentelių laukai aprašyti \ref{tab:db_users}--\ref{tab:db_auth_events} lentelėse.
+
+\input{figures/db_schema}
+
+\begin{table}[H]
+    \centering
+    \caption{Lentelė \texttt{users} (jau egzistuojanti, papildoma \texttt{mfa\_enabled} lauku).}
+    \label{tab:db_users}
+    \begin{tabularx}{\textwidth}{l l L}
+        \toprule
+        \textbf{Laukas} & \textbf{Tipas} & \textbf{Paskirtis} \\
+        \midrule
+        \texttt{id} & UUID, PK & Vartotojo identifikatorius \\
+        \texttt{email} & TEXT, UNIQUE & Prisijungimo vardas \\
+        \texttt{password\_hash} & TEXT & Slaptažodžio maiša (argon2id) -- pirmasis faktorius \\
+        \texttt{mfa\_enabled} & BOOLEAN & Ar reikalauti antrojo faktoriaus \\
+        \texttt{created\_at} & TIMESTAMP & Paskyros sukūrimo laikas \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+\begin{table}[H]
+    \centering
+    \caption{Lentelė \texttt{oauth\_identities} (vartotojo ir \textit{Google} paskyros susiejimas).}
+    \label{tab:db_oauth}
+    \begin{tabularx}{\textwidth}{l l L}
+        \toprule
+        \textbf{Laukas} & \textbf{Tipas} & \textbf{Paskirtis} \\
+        \midrule
+        \texttt{id} & UUID, PK & Įrašo identifikatorius \\
+        \texttt{user\_id} & UUID, FK & Nuoroda į \texttt{users.id} \\
+        \texttt{provider} & TEXT & Tapatybės teikėjas (\texttt{google}) \\
+        \texttt{provider\_sub} & TEXT & ID žetono \texttt{sub}; pagal jį tikrinamas antrasis faktorius \\
+        \texttt{email\_at\_link} & TEXT & \textit{Google} el. paštas susiejimo metu. Naudojamas tik rodymui, bet ne tikrinimui \\
+        \texttt{linked\_at} & TIMESTAMP & Susiejimo laikas \\
+        \texttt{last\_used\_at} & TIMESTAMP & Paskutinio sėkmingo patvirtinimo laikas \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+Lentelei \texttt{oauth\_identities} taikomi du unikalumo apribojimai. UNIQUE(\texttt{provider}, \texttt{provider\_sub}) užtikrina, kad viena \textit{Google} paskyra būtų susieta tik su viena mūsų sistemos paskyra. UNIQUE(\texttt{user\_id}, \texttt{provider}) leidžia vartotojui susieti tik vieną \textit{Google} paskyrą.
+
+\begin{table}[H]
+    \centering
+    \caption{Lentelė \texttt{mfa\_recovery\_codes} (vienkartiniai atkūrimo kodai).}
+    \label{tab:db_recovery}
+    \begin{tabularx}{\textwidth}{l l L}
+        \toprule
+        \textbf{Laukas} & \textbf{Tipas} & \textbf{Paskirtis} \\
+        \midrule
+        \texttt{id} & UUID, PK & Įrašo identifikatorius \\
+        \texttt{user\_id} & UUID, FK & Nuoroda į \texttt{users.id} \\
+        \texttt{code\_hash} & TEXT & Atkūrimo kodo maiša (argon2id); pats kodas nesaugomas \\
+        \texttt{used\_at} & TIMESTAMP, NULL & Panaudojimo laikas (NULL -- kodas dar nepanaudotas) \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+\begin{table}[H]
+    \centering
+    \caption{Lentelė \texttt{auth\_events} (autentifikavimo įvykių žurnalas).}
+    \label{tab:db_auth_events}
+    \begin{tabularx}{\textwidth}{l l L}
+        \toprule
+        \textbf{Laukas} & \textbf{Tipas} & \textbf{Paskirtis} \\
+        \midrule
+        \texttt{id} & UUID, PK & Įrašo identifikatorius \\
+        \texttt{user\_id} & UUID, FK & Nuoroda į \texttt{users.id} \\
+        \texttt{event\_type} & TEXT & \texttt{mfa\_enrolled}, \texttt{mfa\_success}, \texttt{mfa\_failed}, \texttt{mfa\_disabled}, \texttt{recovery\_used} \\
+        \texttt{ip} & TEXT & IP adresas (vietai nurodyti pranešime vartotojui) \\
+        \texttt{user\_agent} & TEXT & Naršyklė ir įrenginys \\
+        \texttt{created\_at} & TIMESTAMP & Įvykio laikas \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+Jei taikomas rizika paremtas MFA (žr.~\ref{subsec:rizika} poskyrį), papildomai reikalinga lentelė \texttt{trusted\_devices}. Joje saugomi \texttt{user\_id}, slapuko maiša, naršyklė ir galiojimo pabaiga.
+
+\textbf{Laikini duomenys (serverio sesija, ne duomenų bazė).} Vienam OAuth srautui reikalingos reikšmės saugomos serverio sesijoje:
+\begin{itemize}
+    \item \texttt{state}, \texttt{nonce}, \texttt{code\_verifier} -- vienkartinės atsitiktinės reikšmės;
+    \item \texttt{purpose} -- srauto tikslas: \texttt{enroll}, \texttt{login} arba \texttt{step\_up};
+    \item \texttt{pending\_user\_id} -- vartotojas, teisingai įvedęs slaptažodį (tik prisijungiant);
+    \item \texttt{expires\_at} -- galiojimo pabaiga (5--10 min.).
+\end{itemize}
+Šios reikšmės ištrinamos iš karto po grįžimo iš \textit{Google}, nesvarbu, ar patvirtinimas pavyko.
+
+\textbf{Kas nesaugoma.} Laikantis duomenų kiekio mažinimo principo~\cite{bdar}, nesaugomi:
+\begin{itemize}
+    \item \textit{Google} slaptažodis -- aplikacija jo niekada nemato;
+    \item prieigos ir atnaujinimo (\textit{angl. refresh}) žetonai. Antrajam faktoriui jie nereikalingi, o jų saugojimas tik didintų riziką;
+    \item visas ID žetonas -- pakanka jo \texttt{sub}.
+\end{itemize}
+
+\textbf{Konfigūracija.} \texttt{GOOGLE\_CLIENT\_ID}, \texttt{GOOGLE\_CLIENT\_SECRET} ir \texttt{REDIRECT\_URI} laikomi aplinkos kintamuosiuose arba slaptųjų duomenų saugykloje, ne duomenų bazėje. \texttt{client\_secret} niekada neturi patekti į naršyklę ar kodo repozitoriją.

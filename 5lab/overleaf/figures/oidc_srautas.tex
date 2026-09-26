@@ -1,0 +1,53 @@
+\begin{figure}[H]
+    \centering
+    \begin{adjustbox}{max width=\textwidth}
+    \begin{tikzpicture}
+        % Dalyviai
+        \node[actor] (U) at (0,0)  {Vartotojas\\(naršyklė)};
+        \node[actor] (A) at (7,0)  {Aplikacija\\(serveris)};
+        \node[actor] (G) at (14,0) {\textit{Google}\\(OpenID teikėjas)};
+
+        % Gyvavimo linijos
+        \foreach \x in {0,7,14} {
+            \draw[lifeline] (\x,-0.5) -- (\x,-17.2);
+        }
+
+        \draw[msg] (0,-1.4) -- node[lbl, above] {1. „Prisijungti per Google“} (7,-1.4);
+
+        \node[note] at (7,-2.5) {2. Sugeneruoja \texttt{state}, \texttt{nonce}, \texttt{code\_verifier};\\
+            \texttt{code\_challenge} = BASE64URL(SHA-256(\texttt{code\_verifier}))};
+
+        \draw[ret] (7,-4.3) -- node[lbl, above] {3. HTTP 302 peradresavimas į \textit{Google}\\
+            (\texttt{state}, \texttt{nonce}, \texttt{code\_challenge}, \ldots)} (0,-4.3);
+
+        \draw[msg] (0,-5.3) -- node[lbl, above, pos=0.25] {4. GET \texttt{/o/oauth2/v2/auth?}\ldots} (14,-5.3);
+
+        \node[note] at (14,-6.6) {5. Prisijungimas prie \textit{Google}\\
+            (slaptažodis + 2SV arba \textit{passkey})\\
+            ir sutikimas (\textit{consent})};
+
+        \draw[ret] (14,-8.5) -- node[lbl, above, pos=0.75] {6. HTTP 302 $\to$ \texttt{redirect\_uri}\\
+            ?\texttt{code}=\ldots\&\texttt{state}=\ldots} (0,-8.5);
+
+        \draw[msg] (0,-9.9) -- node[lbl, above] {7. GET \texttt{/auth/google/callback}\\
+            ?\texttt{code}=\ldots\&\texttt{state}=\ldots} (7,-9.9);
+
+        \node[note] at (7,-10.7) {8. Patikrina, ar \texttt{state} sutampa su išsaugotu sesijoje};
+
+        \draw[msg] (7,-12.1) -- node[lbl, above] {9. POST \texttt{/token}: \texttt{code}, \texttt{client\_secret},\\
+            \texttt{code\_verifier} (tiesioginis TLS kanalas)} (14,-12.1);
+
+        \node[note] at (14,-13.0) {10. SHA-256(\texttt{code\_verifier})\\
+            $\stackrel{?}{=}$ \texttt{code\_challenge}};
+
+        \draw[ret] (14,-14.2) -- node[lbl, above] {11. \texttt{id\_token} (JWT), \texttt{access\_token}} (7,-14.2);
+
+        \node[note] at (7,-15.3) {12. Tikrina ID žetoną: \texttt{iss}, \texttt{aud}, \texttt{exp}, \texttt{nonce},\\
+            parašą (JWKS); naudoja \texttt{sub}};
+
+        \draw[ret] (7,-16.7) -- node[lbl, above] {13. Antrasis faktorius patvirtintas} (0,-16.7);
+    \end{tikzpicture}
+    \end{adjustbox}
+    \caption{OpenID Connect autorizacijos kodo srautas su PKCE.}
+    \label{fig:oidc_srautas}
+\end{figure}

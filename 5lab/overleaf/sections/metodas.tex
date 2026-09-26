@@ -1,0 +1,146 @@
+\section{Pasirinktas MFA metodas ir jo veikimas}
+\label{sec:metodas}
+
+\subsection{OAuth 2.0 ir OpenID Connect}
+\label{subsec:oauth_oidc}
+
+\textbf{OAuth 2.0}~\cite{rfc6749} -- tai deleguotos autorizacijos (\textit{angl. delegated authorization}) protokolas. Jis leidžia aplikacijai gauti ribotą prieigą prie vartotojo duomenų kitoje paslaugoje (pvz., \textit{Google}), nesužinant vartotojo slaptažodžio. Vartotojas prisijungia tiesiogiai prie paslaugos, o aplikacija gauna tik prieigos žetoną (\textit{angl. access token}).
+
+Grynas OAuth 2.0 nėra autentifikavimo protokolas. Prieigos žetonas skirtas API, o ne aplikacijai, todėl iš jo aplikacija negali patikimai sužinoti, \emph{kas} ir \emph{kada} prisijungė~\cite{oauth_authentication}. Autentifikavimui naudojamas \textbf{OpenID Connect 1.0}~\cite{oidc_core} -- tapatybės sluoksnis virš OAuth 2.0. Aplikacija užklausoje nurodo \texttt{openid} sritį (\textit{angl. scope}) ir kartu su prieigos žetonu gauna \textbf{ID žetoną} (\textit{angl. ID token}). Tai tapatybės teikėjo pasirašytas JWT, aprašantis autentifikavimo įvykį. Svarbiausi jo laukai (\textit{angl. claims}):
+\begin{itemize}
+    \item \texttt{iss} -- žetoną išdavęs teikėjas (\textit{Google} atveju \texttt{https://accounts.google.com});
+    \item \texttt{sub} -- vartotojo identifikatorius pas teikėją. Jis nekinta ir niekada nesuteikiamas kitam vartotojui~\cite{google_oidc};
+    \item \texttt{aud} -- aplikacijos, kuriai skirtas žetonas, kliento identifikatorius (\texttt{client\_id});
+    \item \texttt{exp}, \texttt{iat} -- žetono galiojimo pabaigos ir išdavimo laikas;
+    \item \texttt{nonce} -- aplikacijos sugeneruota atsitiktinė reikšmė, susiejanti žetoną su konkrečia užklausa;
+    \item \texttt{auth\_time}, \texttt{amr} -- kada ir kokiais metodais (pvz., \texttt{pwd}, \texttt{mfa}, \texttt{hwk}, \texttt{swk}) vartotojas autentifikavosi~\cite{rfc8176}. \textit{Google} šiuos laukus grąžina tik tada, kai jų paprašoma per \texttt{claims} parametrą. Be to, tai veikia tik \textit{Google} patvirtintoms (\textit{angl. verified}) produkcinėms aplikacijoms, kurių nustatymuose įjungtas \textit{security bundle}~\cite{google_security_bundle}.
+\end{itemize}
+
+Šiame plane „OAuth MFA metodas“ reiškia OAuth 2.0 autorizacijos kodo srautą su PKCE ir OpenID Connect ID žetonu, kai tapatybės teikėjas yra \textit{Google}. Protokolo dalyviai pateikti \ref{tab:roles} lentelėje.
+
+\begin{table}[H]
+    \centering
+    \caption{OAuth 2.0 ir OpenID Connect dalyviai.}
+    \label{tab:roles}
+    \begin{tabularx}{\textwidth}{L L L}
+        \toprule
+        \textbf{OAuth 2.0 rolė} & \textbf{OpenID Connect rolė} & \textbf{Šiame plane} \\
+        \midrule
+        Išteklių savininkas (\textit{Resource Owner}) & Galutinis vartotojas (\textit{End-User}) & Vartotojas ir jo naršyklė \\
+        Klientas (\textit{Client}) & Pasitikinti šalis (\textit{Relying Party}) & Mūsų aplikacija (serveris) \\
+        Autorizacijos serveris (\textit{Authorization Server}) & OpenID teikėjas (\textit{OpenID Provider}) & \textit{Google} \\
+        Išteklių serveris (\textit{Resource Server}) & -- & \textit{Google} API (šiame plane nenaudojamas) \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+\subsection{Kodėl tai daugiafaktorinis autentifikavimas}
+\label{subsec:faktorius}
+
+Pagal skaidrėse pateiktą autentifikavimo tipų klasifikaciją~\cite{VMA}:
+\begin{itemize}
+    \item \textbf{pirmasis faktorius} (aplikacijos slaptažodis) yra \emph{tai, ką vartotojas žino};
+    \item \textbf{antrasis faktorius} (iš anksto susietos \textit{Google} paskyros valdymas) artimiausias tipui \emph{tai, ką vartotojas turi}. Užpuolikas gali sužinoti slaptažodį iš nutekėjusios duomenų bazės, per \textit{phishing} ataką arba todėl, kad vartotojas tą patį slaptažodį naudoja keliose sistemose. Vis tiek jis neprisijungs, jei neturi prieigos prie vartotojo \textit{Google} paskyros.
+\end{itemize}
+
+Esminė projektavimo taisyklė: grįžus iš \textit{Google}, aplikacija \emph{neieško} vartotojo pagal ID žetono \texttt{sub}. Ji \emph{palygina} \texttt{sub} su reikšme, susieta su tuo vartotoju, kuris ką tik teisingai įvedė slaptažodį. Jei vartotojas būtų ieškomas pagal \texttt{sub}, gautųsi įprastas vieno faktoriaus prisijungimas „Prisijungti su Google“, o ne MFA.
+
+Antrojo faktoriaus stiprumas priklauso nuo to, kaip \textit{Google} autentifikuoja vartotoją. Jei \textit{Google} paskyra saugoma tik slaptažodžiu, abu faktoriai faktiškai yra žinojimo tipo (du slaptažodžiai). Todėl:
+\begin{itemize}
+    \item aktyvuojant MFA vartotojui rekomenduojama \textit{Google} paskyroje įjungti dviejų veiksmų patvirtinimą (\textit{angl. 2-Step Verification}, 2SV) arba \textit{passkey};
+    \item produkcinėje, \textit{Google} patvirtintoje aplikacijoje galima papildomai prašyti \texttt{amr} ir \texttt{auth\_time} laukų. Tuomet priimami tik tie ID žetonai, kurių \texttt{amr} turi \texttt{mfa}, \texttt{hwk} arba \texttt{swk}, o \texttt{auth\_time} ne senesnis nei, pvz., 5 minutės~\cite{google_security_bundle,rfc8176}.
+\end{itemize}
+
+\subsection{Autorizacijos kodo srautas su PKCE}
+\label{subsec:srautas}
+
+Naudojamas autorizacijos kodo srautas (\textit{angl. Authorization Code Flow}) su PKCE (\textit{angl. Proof Key for Code Exchange})~\cite{rfc7636}. Būtent šį srautą siūlo OAuth 2.0 saugumo gerųjų praktikų dokumentas RFC~9700, o netiesioginio (\textit{angl. implicit}) srauto jame naudoti nebepatariama~\cite{rfc9700}. Srauto žingsniai (\ref{fig:oidc_srautas} pav.):
+\begin{enumerate}
+    \item Aplikacija sugeneruoja tris atsitiktines reikšmes -- \texttt{state}, \texttt{nonce} ir \texttt{code\_verifier} -- ir išsaugo jas serverio sesijoje. Iš \texttt{code\_verifier} apskaičiuojamas \texttt{code\_challenge} = BASE64URL(SHA-256(\texttt{code\_verifier})).
+    \item Naršyklė peradresuojama į \textit{Google} autorizacijos galinį tašką (\textit{angl. authorization endpoint}) su \texttt{state}, \texttt{nonce} ir \texttt{code\_challenge}.
+    \item Vartotojas prisijungia prie \textit{Google} (slaptažodis ir 2SV arba \textit{passkey}) ir patvirtina, kad sutinka pasidalinti prašomais duomenimis.
+    \item \textit{Google} peradresuoja naršyklę atgal į iš anksto užregistruotą \texttt{redirect\_uri} su vienkartiniu autorizacijos kodu (\texttt{code}) ir tuo pačiu \texttt{state}.
+    \item Aplikacija patikrina, ar \texttt{state} sutampa su išsaugotu sesijoje. Tada tiesioginiu TLS kanalu iškeičia kodą į žetonus \textit{Google} žetonų galiniame taške (\textit{angl. token endpoint}), pateikdama \texttt{client\_secret} ir \texttt{code\_verifier}. \textit{Google} patikrina, ar SHA-256(\texttt{code\_verifier}) sutampa su anksčiau gautu \texttt{code\_challenge}.
+    \item \textit{Google} grąžina ID žetoną ir prieigos žetoną.
+    \item Aplikacija patikrina ID žetono laukus \texttt{iss}, \texttt{aud}, \texttt{exp} ir \texttt{nonce}. Žetonas gautas tiesiai iš \textit{Google} per TLS, todėl OpenID Connect leidžia vietoj parašo tikrinimo pasikliauti TLS serverio patikra~\cite{oidc_core}. Vis dėlto papildomai tikrinamas ir žetono parašas pagal \textit{Google} viešuosius raktus (JWKS). Tik po visų patikrų naudojamas \texttt{sub}.
+\end{enumerate}
+
+\input{figures/oidc_srautas}
+
+Autorizacijos užklausos pavyzdys (reikšmės sutrumpintos, \texttt{code\_challenge} paimtas iš RFC~7636 pavyzdžio~\cite{rfc7636}):
+
+\begin{verbatim}
+GET https://accounts.google.com/o/oauth2/v2/auth
+    ?response_type=code
+    &client_id=1234567890-abc.apps.googleusercontent.com
+    &redirect_uri=https://app.example.lt/auth/google/callback
+    &scope=openid%20email
+    &state=af0ifjsldkj
+    &nonce=n-0S6_WzA2Mj
+    &code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM
+    &code_challenge_method=S256
+\end{verbatim}
+
+Iškoduotos ID žetono naudingosios dalies (\textit{angl. payload}) pavyzdys. Laukai \texttt{auth\_time} ir \texttt{amr} būna tik tada, kai jų paprašoma (žr.~\ref{subsec:oauth_oidc} poskyrį):
+
+\begin{verbatim}
+{
+  "iss": "https://accounts.google.com",
+  "azp": "1234567890-abc.apps.googleusercontent.com",
+  "aud": "1234567890-abc.apps.googleusercontent.com",
+  "sub": "110169484474386276334",
+  "email": "vardenis.pavardenis@gmail.com",
+  "email_verified": true,
+  "nonce": "n-0S6_WzA2Mj",
+  "iat": 1790412000,
+  "exp": 1790415600,
+  "auth_time": 1790411950,
+  "amr": ["pwd", "mfa"]
+}
+\end{verbatim}
+
+\subsection{Srauto apsaugos mechanizmai}
+\label{subsec:apsauga}
+
+Kiekvienas srauto parametras apsaugo nuo konkrečios atakos (\ref{tab:apsauga} lentelė). Jų praleidimas yra dažniausia OAuth implementavimo klaida~\cite{rfc9700}.
+
+\begin{table}[H]
+    \centering
+    \caption{Apsaugos mechanizmai ir grėsmės, nuo kurių jie saugo.}
+    \label{tab:apsauga}
+    \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{5cm} L}
+        \toprule
+        \textbf{Mechanizmas} & \textbf{Nuo ko apsaugo} \\
+        \midrule
+        \texttt{state} & CSRF: užpuolikas negali įpiršti savo autorizacijos atsakymo, pvz., prijungti savo \textit{Google} paskyrą prie aukos paskyros \\
+        \texttt{nonce} & ID žetono pakartotinis panaudojimas (\textit{angl. replay}) ir įterpimas iš kitos sesijos \\
+        PKCE (\texttt{S256}) & Autorizacijos kodo perėmimas ir įterpimas: be \texttt{code\_verifier} kodo iškeisti į žetonus negalima \\
+        Tikslus \texttt{redirect\_uri} & Kodo nutekėjimas į užpuoliko adresą; \textit{Google} priima tik užregistruotus adresus \\
+        \texttt{iss}, \texttt{aud}, \texttt{exp} ir parašo tikrinimas & Suklastoti, pasibaigę arba kitai aplikacijai skirti žetonai \\
+        \texttt{sub}, o ne \texttt{email} & Paskyros perėmimas: el. pašto adresas gali keistis ir nebūti unikalus, o \texttt{sub} nekinta~\cite{google_oidc} \\
+        HTTPS, \texttt{client\_secret} tik serveryje & Srauto perėmimas ir kliento paslapties nutekėjimas \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+\subsection{Privalumai ir trūkumai}
+\label{subsec:privalumai}
+
+\textbf{Privalumai}
+\begin{enumerate}
+    \item Nereikia papildomos aparatinės įrangos ar programėlės -- dauguma vartotojų jau turi \textit{Google} paskyrą.
+    \item Aplikacija nesaugo jokios antrojo faktoriaus paslapties (nėra TOTP rakto ar biometrinių duomenų), tik viešą identifikatorių \texttt{sub}. Todėl duomenų bazės nutekėjimas antrojo faktoriaus neatskleidžia.
+    \item Paveldimas \textit{Google} saugumas: dviejų veiksmų patvirtinimas, \textit{passkey}, įtartinų prisijungimų aptikimas.
+    \item Protokolas standartizuotas~\cite{rfc6749,oidc_core}, jam yra sertifikuotų bibliotekų.
+    \item Iš dalies atsparus \textit{phishing} atakoms. Kodas grąžinamas tik į užregistruotą \texttt{redirect\_uri}, o jam iškeisti reikia \texttt{client\_secret} ir \texttt{code\_verifier}. Visiškas atsparumas priklauso nuo \textit{Google} pusėje naudojamo metodo: \textit{passkey} ar saugos raktas atsparūs, SMS -- ne.
+\end{enumerate}
+
+\textbf{Trūkumai}
+\begin{enumerate}
+    \item Priklausomybė nuo trečiosios šalies. Sutrikus \textit{Google} paslaugai arba užblokavus vartotojo \textit{Google} paskyrą, vartotojas negalės prisijungti.
+    \item Privatumas: \textit{Google} sužino, kada vartotojas jungiasi prie mūsų sistemos.
+    \item Faktoriaus stiprumas priklauso nuo \textit{Google} paskyros apsaugos (žr.~\ref{subsec:faktorius} poskyrį).
+    \item Jei naršyklėje jau aktyvi \textit{Google} sesija, antrasis žingsnis tampa vienu paspaudimu. Užpuolikas, turintis fizinę prieigą prie atrakinto įrenginio, jį įveiktų.
+    \item Implementavimo klaidos sukuria rimtų saugumo spragų: nenaudojamas \texttt{state} ar PKCE, netinkamai tikrinamas ID žetonas, vartotojas identifikuojamas pagal \texttt{email}.
+    \item Reikia \textit{Google} paskyros, interneto ryšio ir peradresavimų tarp domenų. Vartotojams be \textit{Google} paskyros reikia alternatyvaus MFA metodo.
+\end{enumerate}

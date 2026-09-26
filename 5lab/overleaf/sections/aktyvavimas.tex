@@ -1,0 +1,20 @@
+\section{MFA aktyvavimas}
+\label{sec:aktyvavimas}
+
+MFA gali aktyvuoti tik prisijungęs vartotojas. Aktyvavimo metu jo paskyra susiejama su \textit{Google} paskyra, t.~y. išsaugomas \textit{Google} ID žetono \texttt{sub}. Aktyvavimo seka pavaizduota \ref{fig:aktyvavimas} pav.:
+\begin{enumerate}
+    \item Vartotojas nustatymų skiltyje „Saugumas“ paspaudžia „Įjungti MFA per Google“.
+    \item Aplikacija paprašo pakartotinai įvesti slaptažodį ir jį patikrina. Taip kitas asmuo negalės įjungti MFA pasinaudojęs palikta atvira sesija.
+    \item Aplikacija sugeneruoja \texttt{state}, \texttt{nonce} ir \texttt{code\_verifier}. Jie išsaugomi serverio sesijoje kartu su tikslu \texttt{purpose = enroll} ir galiojimo laiku (10 min.).
+    \item Naršyklė peradresuojama į \textit{Google} su \texttt{scope = openid email} ir \texttt{prompt = select\_account}. Taip vartotojas sąmoningai pasirenka, kurią \textit{Google} paskyrą susieti.
+    \item Vartotojas prisijungia prie \textit{Google} ir sutikimo lange (\textit{angl. consent screen}) leidžia aplikacijai gauti jo identifikatorių ir el. pašto adresą.
+    \item \textit{Google} grąžina vartotoją į \texttt{redirect\_uri}. Aplikacija patikrina \texttt{state}, iškeičia kodą į žetonus (su \texttt{code\_verifier}), patikrina ID žetoną ir \texttt{nonce} (žr.~\ref{subsec:srautas} poskyrį).
+    \item Aplikacija patikrina, ar pora (\texttt{google}, \texttt{sub}) dar nėra susieta su kita paskyra. Jei susieta, aktyvavimas nutraukiamas.
+    \item Duomenų bazėje išsaugomas susiejimas (\texttt{oauth\_identities} lentelė) ir nustatoma \texttt{users.mfa\_enabled = true}.
+    \item Sugeneruojama 10 vienkartinių atkūrimo kodų. Jie parodomi vartotojui tik vieną kartą, o duomenų bazėje saugomos tik jų maišos (argon2id). Tai vienas iš skaidrėse siūlomų MFA atkūrimo būdų~\cite{VMA}.
+    \item Vartotojui išsiunčiamas el. laiškas „MFA įjungtas“. Jei MFA įjungė ne jis, apie tai sužinos iš karto.
+\end{enumerate}
+
+\input{figures/aktyvavimas}
+
+MFA išjungimui ir susietos \textit{Google} paskyros pakeitimui reikalingas sėkmingas OAuth patvirtinimas (žr.~\ref{subsec:step_up} poskyrį). Kitaip užpuolikas, sužinojęs tik slaptažodį, galėtų MFA tiesiog išjungti.

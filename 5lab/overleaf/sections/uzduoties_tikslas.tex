@@ -1,0 +1,32 @@
+\section{Užduoties tikslas}
+\label{sec:uzduoties_tikslas}
+
+Užduoties tikslas -- sudaryti vieno pasirinkto daugiafaktorinio autentifikavimo (\textit{angl. multi-factor authentication}, MFA) metodo implementavimo planą~\cite{VMA}. Pasirinktas metodas -- \textbf{OAuth 2.0} protokolas kartu su jo tapatybės sluoksniu \textbf{OpenID Connect} (OIDC). Antrasis faktorius -- išorinio tapatybės teikėjo (\textit{angl. identity provider}, IdP) \textit{Google} paskyra.
+
+Plane nagrinėjama interneto aplikacija (serveris -- Node.js su TypeScript), kurioje:
+\begin{itemize}
+    \item \textbf{pirmasis faktorius} -- aplikacijos slaptažodis (tai, ką vartotojas žino);
+    \item \textbf{antrasis faktorius} -- prisijungimas prie iš anksto susietos \textit{Google} paskyros per OAuth 2.0 ir OpenID Connect (tai, ką vartotojas turi).
+\end{itemize}
+
+Užduoties reikalavimai ir juos atitinkančios darbo dalys pateiktos \ref{tab:reikalavimai} lentelėje.
+
+\begin{table}[H]
+    \centering
+    \caption{Užduoties reikalavimai ir juos atitinkančios darbo dalys.}
+    \label{tab:reikalavimai}
+    \begin{tabularx}{\textwidth}{L l}
+        \toprule
+        \textbf{Reikalavimas} & \textbf{Darbo dalis} \\
+        \midrule
+        Pasirinktas MFA metodas ir trumpas aprašymas, kaip jis veikia & \ref{sec:metodas} skyrius, \ref{fig:oidc_srautas} pav. \\
+        Kaip vartotojas aktyvuos MFA metodą & \ref{sec:aktyvavimas} skyrius, \ref{fig:aktyvavimas} pav. \\
+        Kaip vartotojas autentifikuosis MFA metodu & \ref{sec:autentifikavimas} skyrius, \ref{fig:prisijungimas} pav. \\
+        Kokie duomenys saugomi duomenų bazėje & \ref{sec:duomenu_baze} skyrius, \ref{fig:db_schema} pav. \\
+        Biblioteka arba servisas, kuriuo implementuojamas MFA & \ref{sec:biblioteka} skyrius \\
+        Aktualūs paveikslėliai & \ref{fig:oidc_srautas}--\ref{fig:db_schema} pav. \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+Plano tekstui ir diagramoms parengti buvo pasinaudota Claude~\cite{claude}.

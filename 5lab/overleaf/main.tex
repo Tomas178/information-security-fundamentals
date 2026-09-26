@@ -1,0 +1,72 @@
+\documentclass[]{VUMIFTemplateClass}
+
+\usepackage{indentfirst}
+\usepackage{amsmath, amsthm, amssymb, amsfonts}
+\usepackage{graphicx}
+\usepackage{verbatim}
+\usepackage[hidelinks]{hyperref}
+\usepackage{color,algorithm,algorithmic}
+\usepackage[nottoc]{tocbibind}
+\usepackage{tocloft}
+\usepackage{caption}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{adjustbox}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning, calc}
+
+\usepackage{titlesec}
+\newcommand{\sectionbreak}{\clearpage}
+
+\makeatletter
+\renewcommand{\fnum@algorithm}{\thealgorithm}
+\makeatother
+\renewcommand\thealgorithm{\arabic{algorithm} algoritmas}
+
+% Lentelių stulpelis, kuriame tekstas lygiuojamas pagal kairę
+\newcolumntype{L}{>{\raggedright\arraybackslash}X}
+
+% Sekų diagramų stiliai
+\tikzset{
+    actor/.style={draw, rounded corners, fill=gray!10, minimum width=3.2cm,
+        minimum height=1cm, align=center, font=\small\bfseries},
+    lifeline/.style={dashed, gray},
+    msg/.style={-{Stealth[length=2.5mm]}, thick},
+    ret/.style={-{Stealth[length=2.5mm]}, thick, dashed},
+    lbl/.style={font=\footnotesize, align=center, fill=white, inner sep=1.5pt},
+    note/.style={draw, fill=yellow!15, font=\footnotesize, align=left,
+        inner sep=3pt},
+}
+
+\bibliography{bibliografija}
+
+\studijuprograma{Informacinių sistemų inžinerijos}
+\darbotipas{Laboratorinis darbas}
+\darbopavadinimas{Daugiafaktorinis autentifikavimas: OAuth 2.0 (OpenID Connect) MFA implementavimo planas}
+\darbopavadinimasantras{Multi-Factor Authentication: OAuth 2.0 (OpenID Connect) Implementation Plan}
+\autorius{Tomas Petronis}
+
+\vadovas{Rolandas Gricius}
+
+\begin{document}
+\selectlanguage{lithuanian}
+
+\onehalfspacing
+\input{sections/titulinis}
+
+\tableofcontents
+\onehalfspacing
+
+\input{sections/uzduoties_tikslas}
+\input{sections/metodas}
+\input{sections/aktyvavimas}
+\input{sections/autentifikavimas}
+\input{sections/duomenu_baze}
+\input{sections/biblioteka}
+\input{sections/isvados}
+
+\singlespacing
+
+\printbibliography[title = {Šaltiniai}]
+\end{document}

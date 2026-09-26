@@ -1,0 +1,11 @@
+\sectionnonum{Išvados}
+\label{sec:isvados}
+
+Žemiau pateikiamos laboratorinio darbo išvados:
+\begin{itemize}
+    \item OAuth 2.0 yra autorizacijos protokolas, todėl autentifikavimui naudojamas jo OpenID Connect sluoksnis ir ID žetonas.
+    \item OAuth veikia kaip antrasis faktorius tik tada, kai grįžus iš \textit{Google} ID žetono \texttt{sub} \emph{palyginamas} su jau slaptažodžiu autentifikuoto vartotojo susieta reikšme, o ne naudojamas vartotojui surasti.
+    \item Saugiam įgyvendinimui būtini \texttt{state}, \texttt{nonce}, PKCE, tikslus \texttt{redirect\_uri} ir kruopštus ID žetono tikrinimas. Visa tai atlieka sertifikuota \texttt{openid-client} biblioteka.
+    \item Duomenų bazėje pakanka saugoti \textit{Google} \texttt{sub}, atkūrimo kodų maišas ir autentifikavimo įvykius -- jokios antrojo faktoriaus paslapties saugoti nereikia.
+    \item Metodo stiprumas priklauso nuo \textit{Google} paskyros apsaugos. Todėl rekomenduojama reikalauti \textit{Google} dviejų veiksmų patvirtinimo ir numatyti atkūrimo kodus bei alternatyvų MFA metodą.
+\end{itemize}

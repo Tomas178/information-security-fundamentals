@@ -1,0 +1,69 @@
+\begin{figure}[H]
+    \centering
+    \begin{adjustbox}{max width=\textwidth}
+    \begin{tikzpicture}
+        % Dalyviai
+        \node[actor] (U) at (0,0)  {Vartotojas\\(naršyklė)};
+        \node[actor] (A) at (5,0)  {Aplikacija\\(serveris)};
+        \node[actor] (G) at (10,0) {\textit{Google}\\(OpenID teikėjas)};
+        \node[actor] (D) at (15,0) {Duomenų\\bazė};
+
+        % Gyvavimo linijos
+        \foreach \x in {0,5,10,15} {
+            \draw[lifeline] (\x,-0.5) -- (\x,-23.0);
+        }
+
+        \draw[msg] (0,-1.4) -- node[lbl, above] {1. El. paštas + slaptažodis} (5,-1.4);
+
+        \draw[msg] (5,-2.4) -- node[lbl, above, pos=0.75] {2. Slaptažodžio patikra (argon2id)} (15,-2.4);
+
+        \draw[ret] (15,-3.4) -- node[lbl, above, pos=0.25] {2. \texttt{mfa\_enabled}, \texttt{provider\_sub}} (5,-3.4);
+
+        \node[note] at (5,-4.7) {2. Slaptažodis teisingas $\to$ tik laukiančioji būsena:\\
+            \texttt{pending\_user\_id}, \texttt{state}, \texttt{nonce},\\
+            \texttt{code\_verifier} (galioja 5 min.)};
+
+        \draw[ret] (5,-6.3) -- node[lbl, above] {3. HTTP 302 $\to$ \textit{Google}} (0,-6.3);
+
+        \draw[msg] (0,-7.5) -- node[lbl, above, pos=0.25] {3. \texttt{login\_hint} = susietas \texttt{sub}} (10,-7.5);
+
+        \node[note] at (10,-8.7) {4. Prisijungimas prie \textit{Google}\\
+            (jei sesija aktyvi -- tik patvirtinimas)};
+
+        \draw[ret] (10,-10.4) -- node[lbl, above, pos=0.75] {5. HTTP 302 $\to$ \texttt{redirect\_uri}\\
+            (\texttt{code}, \texttt{state})} (0,-10.4);
+
+        \draw[msg] (0,-11.6) -- node[lbl, above] {5. GET \texttt{/auth/google/callback}} (5,-11.6);
+
+        \draw[msg] (5,-12.8) -- node[lbl, above] {5. POST \texttt{/token} (+\texttt{code\_verifier})} (10,-12.8);
+
+        \draw[ret] (10,-13.8) -- node[lbl, above] {5. \texttt{id\_token}} (5,-13.8);
+
+        \node[note] at (5,-15.1) {5. Tikrina \texttt{state}, ID žetoną, \texttt{nonce};\\
+            \textbf{ar \texttt{sub} = susietas \texttt{provider\_sub}?}};
+
+        % alt fragmentas: sėkmė arba nesėkmė
+        \draw[thick] (-1.9,-16.2) rectangle (16.9,-22.6);
+        \node[draw, thick, fill=white, font=\footnotesize\bfseries, anchor=north west,
+            inner sep=2pt] at (-1.9,-16.2) {alt};
+        \node[font=\footnotesize, fill=white, anchor=north west, inner sep=1.5pt]
+            at (-1.0,-16.25) {[\texttt{sub} sutampa]};
+
+        \draw[msg] (5,-17.3) -- node[lbl, above, pos=0.75] {6. \texttt{last\_used\_at}, \texttt{mfa\_success}} (15,-17.3);
+
+        \draw[ret] (5,-18.3) -- node[lbl, above] {6. Nauja sesija (naujas ID)} (0,-18.3);
+
+        \draw[dashed] (-1.9,-18.9) -- (16.9,-18.9);
+        \node[font=\footnotesize, fill=white, anchor=north west, inner sep=1.5pt]
+            at (-1.8,-18.95) {[\texttt{sub} nesutampa / atšaukta / klaida]};
+
+        \draw[msg] (5,-20.0) -- node[lbl, above, pos=0.75] {7. \texttt{auth\_events}: \texttt{mfa\_failed}} (15,-20.0);
+
+        \draw[ret] (5,-21.0) -- node[lbl, above] {7. Prisijungimas atmestas} (0,-21.0);
+
+        \draw[msg] (5,-22.0) -- node[lbl, above] {7. Įspėjimas el. paštu} (0,-22.0);
+    \end{tikzpicture}
+    \end{adjustbox}
+    \caption{Prisijungimas su MFA: slaptažodis ir \textit{Google} patvirtinimas.}
+    \label{fig:prisijungimas}
+\end{figure}
