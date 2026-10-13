@@ -4,15 +4,15 @@
 \subsection{Prisijungimo eiga}
 \label{subsec:prisijungimas}
 
-Vartotojas, kuriam MFA aktyvuotas, prisijungia dviem žingsniais. Įskiepis \texttt{googleMfa} veikia tuo pačiu principu kaip oficialus Better Auth \texttt{twoFactor} įskiepis: po slaptažodžio patikros sesija iš karto pakeičiama trumpalaikiu iššūkiu (\textit{angl. challenge})~\cite{better_auth_2fa}.
+Vartotojas, kuriam MFA aktyvuotas, prisijungia dviem žingsniais. Antrojo faktoriaus perėmimo funkcijos veikia tuo pačiu principu kaip oficialus Better Auth \texttt{twoFactor} įskiepis (\textit{angl. plugin}): po slaptažodžio patikros sesija iš karto pakeičiama trumpalaikiu iššūkiu (\textit{angl. challenge})~\cite{better_auth_2fa}.
 \begin{enumerate}
     \item Vartotojas įveda el. pašto adresą ir slaptažodį. Klientas iškviečia \texttt{authClient.signIn.email()}.
     \item Better Auth patikrina slaptažodį (\textit{scrypt} maiša \texttt{account} lentelėje) ir sukuria sesiją.
-    \item Įskiepio \textit{after} perėmimo funkcija pastebi, kad \texttt{user.googleMfaEnabled = true}. Ji ištrina ką tik sukurtą sesiją ir jos slapuką, o \texttt{verification} lentelėje sukuria iššūkį: jo reikšmė -- vartotojo \texttt{id}, galiojimas -- 10 min. Klientui nustatomas pasirašytas iššūkio slapukas ir grąžinamas atsakymas \texttt{googleMfaRedirect: true}. Vartotojas kol kas neprisijungęs.
-    \item Klientas iškviečia \texttt{authClient.signIn.social()} su \texttt{provider = google}. Įskiepio \textit{before} perėmimo funkcija patikrina iššūkio slapuką. Be jo \textit{Google} prisijungimas atmetamas, todėl \textit{Google} negali būti vienintelis prisijungimo būdas. Ji taip pat nustato \texttt{loginHint} -- susietos paskyros \texttt{accountId}, todėl \textit{Google} iš karto pasiūlo teisingą paskyrą~\cite{google_oidc}.
+    \item \textit{After} perėmimo funkcija pastebi, kad \texttt{user.googleMfaEnabled = true}. Ji ištrina ką tik sukurtą sesiją ir jos slapuką, o \texttt{verification} lentelėje sukuria iššūkį: jo reikšmė -- vartotojo \texttt{id}, galiojimas -- 10 min. Klientui nustatomas pasirašytas iššūkio slapukas ir grąžinamas atsakymas \texttt{googleMfaRedirect: true}. Vartotojas kol kas neprisijungęs.
+    \item Klientas iškviečia \texttt{authClient.signIn.social()} su \texttt{provider = google}. \textit{Before} perėmimo funkcija patikrina iššūkio slapuką. Be jo \textit{Google} prisijungimas atmetamas, todėl \textit{Google} negali būti vienintelis prisijungimo būdas. Ji taip pat nustato \texttt{loginHint} -- susietos paskyros \texttt{accountId}, todėl \textit{Google} iš karto pasiūlo teisingą paskyrą~\cite{google_oidc}.
     \item Better Auth sugeneruoja \texttt{state} ir \texttt{code\_verifier} ir peradresuoja naršyklę į \textit{Google}. Vartotojas prisijungia prie \textit{Google}. Jei naršyklėje jau yra aktyvi \textit{Google} sesija, pakanka ją patvirtinti.
     \item \textit{Google} grąžina vartotoją į \url{/api/auth/callback/google}. Better Auth patikrina \texttt{state}, iškeičia kodą į žetonus (su \texttt{code\_verifier}), paima \texttt{sub} ir suranda vartotoją pagal susietą paskyrą (\texttt{providerId = google}, \texttt{accountId = sub}). \textit{Google} registracija ir automatinis susiejimas išjungti, todėl nesusieta \textit{Google} paskyra nesukurs naujo vartotojo ir neprisijungs prie kito.
-    \item Radęs vartotoją, Better Auth sukuria sesiją. Tada įskiepio \textit{after} perėmimo funkcija \textbf{palygina rastą vartotoją su iššūkio vartotoju}. Tai ir yra patikra, ar \textit{Google} \texttt{sub} sutampa su susietu.
+    \item Radęs vartotoją, Better Auth sukuria sesiją. Tada \textit{after} perėmimo funkcija \textbf{palygina rastą vartotoją su iššūkio vartotoju}. Tai ir yra patikra, ar \textit{Google} \texttt{sub} sutampa su susietu.
     \item \textbf{Sėkmė.} Sesija paliekama. Ji nauja, todėl apsaugo nuo sesijos fiksavimo (\textit{angl. session fixation}). Nustatomas \texttt{session.googleMfaVerifiedAt}, iššūkis ištrinamas, įvykis įrašomas į \texttt{authEvent}.
     \item \textbf{Nesėkmė} (vartotojas atšaukė prisijungimą, rasta kito vartotojo arba nesusieta paskyra, baigėsi iššūkio laikas). Sesija, jei buvo sukurta, ištrinama, įvykis įrašomas į \texttt{authEvent}, o vartotojas nukreipiamas į prisijungimo puslapį su klaida. Vartotojui išsiunčiamas pranešimas su bandymo laiku, naršykle ir vieta~\cite{VMA}. Bandymų skaičių riboja Better Auth užklausų ribojimas (\textit{angl. rate limiting}).
 \end{enumerate}
@@ -25,10 +25,10 @@ Produkcinėje aplikacijoje per \texttt{additionalParams} galima perduoti \texttt
 Pagal skaidrių rekomendacijas~\cite{VMA} \textit{Google} patvirtinimas reikalingas ne tik prisijungiant, bet ir kai vartotojas:
 \begin{itemize}
     \item keičia slaptažodį arba el. pašto adresą (\url{/change-password}, \url{/change-email});
-    \item išjungia MFA arba keičia susietą \textit{Google} paskyrą (\url{/google-mfa/disable}, \url{/unlink-account}, \url{/link-social});
+    \item išjungia MFA arba keičia susietą \textit{Google} paskyrą (\url{/api/mfa/disable}, \url{/unlink-account}, \url{/link-social});
     \item sesijoje gauna aukštesnes teises (pvz., administratoriaus).
 \end{itemize}
-Šiems maršrutams įskiepio \textit{before} perėmimo funkcija reikalauja, kad \texttt{session.googleMfaVerifiedAt} būtų ne senesnis nei 5 min. Jei jis senesnis, klientas pakartoja \textit{Google} žingsnį (\texttt{signIn.social}), o \textit{after} perėmimo funkcija patikrina, ar \textit{Google} paskyra priklauso dabartinės sesijos vartotojui.
+Šiems maršrutams reikia, kad \texttt{session.googleMfaVerifiedAt} būtų ne senesnis nei 5 min. Better Auth maršrutuose tai patikrina \textit{before} perėmimo funkcija, o MFA išjungimo maršrutas tai patikrina pats. Jei jis senesnis, klientas pakartoja \textit{Google} žingsnį (\texttt{signIn.social}), o \textit{after} perėmimo funkcija patikrina, ar \textit{Google} paskyra priklauso dabartinės sesijos vartotojui.
 
 MFA turi būti taikomas visiems prisijungimo būdams. Better Auth konfigūracijoje įjungtas tik el. pašto ir slaptažodžio prisijungimas, o \textit{Google} veikia tik kaip antrasis žingsnis. Be to, slaptažodžio atkūrimas el. paštu neturi automatiškai prijungti vartotojo -- tada po jo prisijungiant vis tiek reikės \textit{Google} žingsnio.
 

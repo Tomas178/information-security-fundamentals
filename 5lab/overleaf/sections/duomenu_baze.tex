@@ -1,13 +1,13 @@
 \section{Duomenų bazė}
 \label{sec:duomenu_baze}
 
-Better Auth pats sukuria ir valdo keturias pagrindines lenteles: \texttt{user}, \texttt{session}, \texttt{account} ir \texttt{verification}~\cite{better_auth_database}. Įskiepis \texttt{googleMfa} prideda du laukus ir vieną lentelę. Schema sugeneruojama ir pritaikoma Better Auth komandų eilutės įrankiu (\texttt{npx auth@latest migrate}). Lentelių ir laukų pavadinimai rašomi \textit{camelCase} stiliumi, kaip įprasta Better Auth. Laukai aprašyti \ref{tab:db_user}--\ref{tab:db_auth_event} lentelėse.
+Better Auth pats sukuria ir valdo keturias pagrindines lenteles: \texttt{user}, \texttt{session}, \texttt{account} ir \texttt{verification}~\cite{better_auth_database}. Antrajam faktoriui \texttt{user} ir \texttt{session} lentelės papildomos po vieną lauką (Better Auth nustatymas \texttt{additionalFields}), o įvykių žurnalui sukuriama atskira aplikacijos lentelė \texttt{authEvent}. Better Auth lentelės kartu su papildomais laukais sugeneruojamos ir pritaikomos Better Auth komandų eilutės įrankiu (\texttt{npx auth@latest migrate}). Lentelių ir laukų pavadinimai rašomi \textit{camelCase} stiliumi, kaip įprasta Better Auth. Laukai aprašyti \ref{tab:db_user}--\ref{tab:db_auth_event} lentelėse.
 
 OAuth antrajam faktoriui jokios paslapties saugoti nereikia. Pakanka \textit{Google} identifikatoriaus \texttt{sub}, kurį Better Auth saugo \texttt{account.accountId} lauke.
 
 \begin{table}[H]
     \centering
-    \caption{Lentelė \texttt{user} (Better Auth ir įskiepio laukas).}
+    \caption{Lentelė \texttt{user} (Better Auth ir papildomas laukas).}
     \label{tab:db_user}
     \begin{tabularx}{\textwidth}{l l L}
         \toprule
@@ -19,7 +19,7 @@ OAuth antrajam faktoriui jokios paslapties saugoti nereikia. Pakanka \textit{Goo
         \texttt{emailVerified} & boolean & Ar el. paštas patvirtintas \\
         \texttt{image} & string, NULL & Nuotraukos adresas \\
         \texttt{createdAt}, \texttt{updatedAt} & date & Sukūrimo ir atnaujinimo laikas \\
-        \texttt{googleMfaEnabled} & boolean & Įskiepio laukas: ar reikalauti \textit{Google} žingsnio \\
+        \texttt{googleMfaEnabled} & boolean & Papildomas laukas: ar reikalauti \textit{Google} žingsnio \\
         \bottomrule
     \end{tabularx}
 \end{table}
@@ -47,7 +47,7 @@ Better Auth taip pat turi laukus \texttt{scope}, \texttt{accessTokenExpiresAt} i
 
 \begin{table}[H]
     \centering
-    \caption{Lentelė \texttt{session} (Better Auth ir įskiepio laukas).}
+    \caption{Lentelė \texttt{session} (Better Auth ir papildomas laukas).}
     \label{tab:db_session}
     \begin{tabularx}{\textwidth}{l l L}
         \toprule
@@ -59,7 +59,7 @@ Better Auth taip pat turi laukus \texttt{scope}, \texttt{accessTokenExpiresAt} i
         \texttt{expiresAt} & date & Galiojimo pabaiga (pagal nutylėjimą po 7 d.) \\
         \texttt{ipAddress}, \texttt{userAgent} & string, NULL & Įrenginio IP adresas ir naršyklė \\
         \texttt{createdAt}, \texttt{updatedAt} & date & Sukūrimo ir atnaujinimo laikas \\
-        \texttt{googleMfaVerifiedAt} & date, NULL & Įskiepio laukas: kada paskutinį kartą patvirtintas \textit{Google} žingsnis \\
+        \texttt{googleMfaVerifiedAt} & date, NULL & Papildomas laukas: kada paskutinį kartą patvirtintas \textit{Google} žingsnis \\
         \bottomrule
     \end{tabularx}
 \end{table}
@@ -85,7 +85,7 @@ Better Auth taip pat turi laukus \texttt{scope}, \texttt{accessTokenExpiresAt} i
 
 \begin{table}[H]
     \centering
-    \caption{Lentelė \texttt{authEvent} (įskiepio autentifikavimo įvykių žurnalas).}
+    \caption{Lentelė \texttt{authEvent} (aplikacijos autentifikavimo įvykių žurnalas).}
     \label{tab:db_auth_event}
     \begin{tabularx}{\textwidth}{l l L}
         \toprule

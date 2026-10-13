@@ -22,12 +22,12 @@ Implementacijai pasirinkta \textbf{Better Auth}~\cite{better_auth} (1.7 versija)
     \item paskyrų susiejimą (\texttt{linkSocial}), kuris neleidžia tos pačios \textit{Google} paskyros susieti su keliais vartotojais~\cite{better_auth_accounts};
     \item duomenų bazėje saugomas sesijas su \texttt{HttpOnly}, \texttt{SameSite=Lax} ir \texttt{Secure} slapukais, CSRF apsaugą (užklausos kilmės tikrinimas) ir užklausų ribojimą~\cite{better_auth_security};
     \item duomenų bazės schemos generavimą ir adapterius (PostgreSQL, MySQL, SQLite, \textit{Prisma}, \textit{Drizzle}, \textit{MongoDB})~\cite{better_auth_database};
-    \item įskiepių sistemą: nauji API maršrutai, perėmimo funkcijos ir schemos laukai~\cite{better_auth_plugins}.
+    \item perėmimo funkcijas, kuriomis galima papildyti bet kurio Better Auth maršruto logiką~\cite{better_auth_hooks}.
 \end{itemize}
 
 \textit{Google} ID žetoną peradresavimo sraute Better Auth gauna tiesiai iš žetonų galinio taško per TLS ir tik iškoduoja (žr.~\ref{subsec:srautas} poskyrį). Pilną parašo (JWKS), \texttt{iss}, \texttt{aud} ir galiojimo patikrą Better Auth atlieka tada, kai ID žetonas gaunamas iš kliento. Šiame plane toks prisijungimas išjungtas.
 
-Better Auth turi oficialų \texttt{twoFactor} įskiepį, tačiau jis palaiko tik TOTP, vienkartinius kodus (OTP) ir atsarginius kodus~\cite{better_auth_2fa}. Režimo, kai antrasis faktorius yra OAuth prisijungimas, nėra. Todėl \textit{Google} žingsnis įgyvendinamas nedideliu savo įskiepiu \texttt{googleMfa}, sukurtu tuo pačiu principu.
+Better Auth turi oficialų \texttt{twoFactor} įskiepį, tačiau jis palaiko tik TOTP, vienkartinius kodus (OTP) ir atsarginius kodus~\cite{better_auth_2fa}. Režimo, kai antrasis faktorius yra OAuth prisijungimas, nėra. Todėl trys antrojo faktoriaus patikros pridedamos Better Auth perėmimo funkcijomis (\texttt{hooks})~\cite{better_auth_hooks}: po slaptažodžio patikros sesija pakeičiama trumpalaikiu iššūkiu, \textit{Google} prisijungimas leidžiamas tik turint šį iššūkį, o grįžus iš \textit{Google} tikrinama, ar rasta paskyra priklauso tam pačiam vartotojui (žr.~\ref{subsec:prisijungimas} poskyrį).
 
 \subsection{Konfigūracija}
 \label{subsec:konfiguracija}
@@ -58,33 +58,10 @@ Better Auth nustatymai, svarbūs šiam MFA metodui, pateikti \ref{tab:konfigurac
         \midrule
         \texttt{databaseHooks.account} & \texttt{create}, \texttt{update} (\textit{before}) & Prieš įrašant pašalina \textit{Google} žetonus \\
         \texttt{rateLimit.customRules} & griežtesnės ribos & \url{/sign-in/email}, \url{/callback/:id} \\
-        \texttt{plugins} & \texttt{googleMfa()} & Antrojo faktoriaus logika (\ref{tab:iskiepis} lentelė) \\
+        \texttt{user.additionalFields}, \texttt{session.additionalFields} & \texttt{googleMfaEnabled}, \texttt{googleMfaVerifiedAt} & Papildomi laukai (žr.~\ref{sec:duomenu_baze} skyrių) \\
+        \texttt{hooks.before}, \texttt{hooks.after} & \texttt{createAuthMiddleware} & Antrojo faktoriaus patikros (žr.~\ref{subsec:prisijungimas} ir \ref{subsec:step_up} poskyrius) \\
         \bottomrule
     \end{tabularx}
 \end{table}
 
-\subsection{Įskiepis \texorpdfstring{\texttt{googleMfa}}{googleMfa}}
-\label{subsec:iskiepis}
-
-Įskiepio sudėtis pateikta \ref{tab:iskiepis} lentelėje. Jis naudoja Better Auth įskiepių priemones: \texttt{createAuthEndpoint}, \texttt{createAuthMiddleware}, \texttt{sessionMiddleware}, \texttt{ctx.context.internalAdapter} (\texttt{createSession}, \texttt{deleteSession}, \texttt{createVerificationValue}), \texttt{ctx.setSignedCookie}, \texttt{deleteSessionCookie} ir \texttt{APIError}~\cite{better_auth_plugins,better_auth_hooks}.
-
-\begin{table}[H]
-    \centering
-    \caption{Įskiepio \texttt{googleMfa} sudėtis.}
-    \label{tab:iskiepis}
-    \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{4.6cm} L}
-        \toprule
-        \textbf{Dalis} & \textbf{Paskirtis} \\
-        \midrule
-        \texttt{schema} & Prideda \texttt{user.googleMfaEnabled}, \texttt{session.googleMfaVerifiedAt} ir lentelę \texttt{authEvent} \\
-        \textit{after}: \url{/sign-in/email} & Jei MFA įjungtas: ištrina sesiją ir jos slapuką, \texttt{verification} lentelėje sukuria iššūkį (10 min.), nustato pasirašytą slapuką, grąžina \texttt{googleMfaRedirect: true} \\
-        \textit{before}: \url{/sign-in/social} & Leidžia \textit{Google} žingsnį tik su galiojančiu iššūkiu arba pakartotiniam patvirtinimui; nustato \texttt{loginHint} \\
-        \textit{after}: \url{/callback/:id} & Palygina naujos sesijos vartotoją su iššūkio vartotoju. Nesutapus ištrina sesiją, įrašo įvykį ir išsiunčia įspėjimą \\
-        \textit{before}: jautrūs maršrutai & \url{/link-social} -- šviežia sesija (10 min.); \url{/unlink-account}, \url{/change-password}, \url{/change-email}, \url{/google-mfa/disable} -- \texttt{googleMfaVerifiedAt} ne senesnis nei 5 min. \\
-        Maršrutai & \url{/google-mfa/enable} (patikrina susietą paskyrą ir įjungia MFA), \url{/google-mfa/disable} \\
-        Kliento įskiepis & Per \texttt{\$InferServerPlugin} klientui suteikia \texttt{authClient.googleMfa.enable()} ir kitus metodus \\
-        \bottomrule
-    \end{tabularx}
-\end{table}
-
-Alternatyvos -- žemesnio lygio OpenID Connect kliento biblioteka \texttt{openid-client} (tada sesijas, duomenų bazę ir paskyrų susiejimą tektų įgyvendinti patiems), \textit{Passport.js}, \textit{Auth.js} arba tapatybės valdymo platformos (\textit{Auth0}, \textit{Keycloak}). Pasirinkta Better Auth, nes ji apima visą autentifikavimo sluoksnį, o trūkstamą \textit{Google} žingsnį leidžia pridėti įskiepiu.
+Alternatyvos -- žemesnio lygio OpenID Connect kliento biblioteka \texttt{openid-client} (tada sesijas, duomenų bazę ir paskyrų susiejimą tektų įgyvendinti patiems), \textit{Passport.js}, \textit{Auth.js} arba tapatybės valdymo platformos (\textit{Auth0}, \textit{Keycloak}). Pasirinkta Better Auth, nes ji apima visą autentifikavimo sluoksnį, o trūkstamą \textit{Google} žingsnį leidžia pridėti perėmimo funkcijomis.
