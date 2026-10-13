@@ -1,20 +1,19 @@
 \section{MFA aktyvavimas}
 \label{sec:aktyvavimas}
 
-MFA gali aktyvuoti tik prisijungęs vartotojas. Aktyvavimo metu jo paskyra susiejama su \textit{Google} paskyra, t.~y. išsaugomas \textit{Google} ID žetono \texttt{sub}. Aktyvavimo seka pavaizduota \ref{fig:aktyvavimas} pav.:
+MFA gali aktyvuoti tik prisijungęs vartotojas. Aktyvavimo metu jo paskyra susiejama su \textit{Google} paskyra: Better Auth \texttt{account} lentelėje sukuria įrašą, kurio \texttt{providerId} yra \texttt{google}, o \texttt{accountId} -- \textit{Google} \texttt{sub}~\cite{better_auth_accounts}. Aktyvavimo seka pavaizduota \ref{fig:aktyvavimas} pav.:
 \begin{enumerate}
-    \item Vartotojas nustatymų skiltyje „Saugumas“ paspaudžia „Įjungti MFA per Google“.
-    \item Aplikacija paprašo pakartotinai įvesti slaptažodį ir jį patikrina. Taip kitas asmuo negalės įjungti MFA pasinaudojęs palikta atvira sesija.
-    \item Aplikacija sugeneruoja \texttt{state}, \texttt{nonce} ir \texttt{code\_verifier}. Jie išsaugomi serverio sesijoje kartu su tikslu \texttt{purpose = enroll} ir galiojimo laiku (10 min.).
-    \item Naršyklė peradresuojama į \textit{Google} su \texttt{scope = openid email} ir \texttt{prompt = select\_account}. Taip vartotojas sąmoningai pasirenka, kurią \textit{Google} paskyrą susieti.
+    \item Vartotojas nustatymų skiltyje „Saugumas“ paspaudžia „Įjungti MFA per Google“. Klientas iškviečia Better Auth \texttt{authClient.linkSocial()} su \texttt{provider = google}.
+    \item Įskiepio \texttt{googleMfa} \textit{before} perėmimo funkcija (\textit{angl. hook}) patikrina, ar sesija šviežia, t.~y. sukurta ne seniau nei prieš 10 min. Jei ne, vartotojas paprašomas iš naujo prisijungti slaptažodžiu. Taip kitas asmuo negalės įjungti MFA pasinaudojęs palikta atvira sesija.
+    \item Better Auth sugeneruoja \texttt{state} ir \texttt{code\_verifier} ir išsaugo juos \texttt{verification} lentelėje bei pasirašytame slapuke (galioja 10 min.)~\cite{better_auth_security}. Tada peradresuoja naršyklę į \textit{Google} su \texttt{scope = openid email} ir \texttt{prompt = select\_account}, kad vartotojas sąmoningai pasirinktų, kurią \textit{Google} paskyrą susieti.
     \item Vartotojas prisijungia prie \textit{Google} ir sutikimo lange (\textit{angl. consent screen}) leidžia aplikacijai gauti jo identifikatorių ir el. pašto adresą.
-    \item \textit{Google} grąžina vartotoją į \texttt{redirect\_uri}. Aplikacija patikrina \texttt{state}, iškeičia kodą į žetonus (su \texttt{code\_verifier}), patikrina ID žetoną ir \texttt{nonce} (žr.~\ref{subsec:srautas} poskyrį).
-    \item Aplikacija patikrina, ar pora (\texttt{google}, \texttt{sub}) dar nėra susieta su kita paskyra. Jei susieta, aktyvavimas nutraukiamas.
-    \item Duomenų bazėje išsaugomas susiejimas (\texttt{oauth\_identities} lentelė) ir nustatoma \texttt{users.mfa\_enabled = true}.
-    \item Sugeneruojama 10 vienkartinių atkūrimo kodų. Jie parodomi vartotojui tik vieną kartą, o duomenų bazėje saugomos tik jų maišos (argon2id). Tai vienas iš skaidrėse siūlomų MFA atkūrimo būdų~\cite{VMA}.
+    \item \textit{Google} grąžina vartotoją į \url{/api/auth/callback/google}. Better Auth patikrina \texttt{state}, iškeičia kodą į žetonus (su \texttt{code\_verifier}) ir iš ID žetono paima \texttt{sub}.
+    \item Better Auth patikrina, ar ši \textit{Google} paskyra dar nesusieta su kitu vartotoju. Jei susieta, susiejimas atmetamas. \textit{Google} el. paštas gali skirtis nuo aplikacijos el. pašto, nes įjungtas nustatymas \texttt{allowDifferentEmails}.
+    \item Sukuriamas \texttt{account} įrašas. \textit{Google} žetonų jame nelieka -- juos pašalina \texttt{databaseHooks} (žr.~\ref{sec:duomenu_baze} skyrių). Nauja sesija nesukuriama, naršyklė grąžinama į nustatymų puslapį.
+    \item Klientas iškviečia įskiepio maršrutą \texttt{authClient.googleMfa.enable()}. Įskiepis patikrina, ar vartotojas turi susietą \textit{Google} paskyrą, nustato \texttt{user.googleMfaEnabled = true} ir įrašo įvykį į \texttt{authEvent} lentelę.
     \item Vartotojui išsiunčiamas el. laiškas „MFA įjungtas“. Jei MFA įjungė ne jis, apie tai sužinos iš karto.
 \end{enumerate}
 
 \input{figures/aktyvavimas}
 
-MFA išjungimui ir susietos \textit{Google} paskyros pakeitimui reikalingas sėkmingas OAuth patvirtinimas (žr.~\ref{subsec:step_up} poskyrį). Kitaip užpuolikas, sužinojęs tik slaptažodį, galėtų MFA tiesiog išjungti.
+MFA išjungimui ir susietos \textit{Google} paskyros pakeitimui reikalingas pakartotinis \textit{Google} patvirtinimas (žr.~\ref{subsec:step_up} poskyrį). Kitaip užpuolikas, sužinojęs tik slaptažodį, galėtų MFA tiesiog išjungti.

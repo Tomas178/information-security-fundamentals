@@ -4,41 +4,42 @@
 \subsection{Prisijungimo eiga}
 \label{subsec:prisijungimas}
 
-Vartotojas, kuriam MFA aktyvuotas, prisijungia dviem žingsniais (\ref{fig:prisijungimas} pav.):
+Vartotojas, kuriam MFA aktyvuotas, prisijungia dviem žingsniais (\ref{fig:prisijungimas} pav.). Įskiepis \texttt{googleMfa} veikia tuo pačiu principu kaip oficialus Better Auth \texttt{twoFactor} įskiepis: po slaptažodžio patikros sesija iš karto pakeičiama trumpalaikiu iššūkiu (\textit{angl. challenge})~\cite{better_auth_2fa}.
 \begin{enumerate}
-    \item Vartotojas įveda el. pašto adresą ir slaptažodį (pirmasis faktorius).
-    \item Aplikacija patikrina slaptažodžio maišą (argon2id). Jei slaptažodis teisingas ir \texttt{mfa\_enabled = true}, sesija dar \emph{nesukuriama}. Išsaugoma tik laukiančioji būsena (\textit{angl. pending}): \texttt{pending\_user\_id}, \texttt{state}, \texttt{nonce} ir \texttt{code\_verifier}. Ji galioja 5 min.
-    \item Naršyklė peradresuojama į \textit{Google}. Parametro \texttt{login\_hint} reikšmė yra susietos paskyros \texttt{sub}, todėl \textit{Google} iš karto pasiūlo teisingą paskyrą~\cite{google_oidc}.
-    \item Vartotojas prisijungia prie \textit{Google}. Jei naršyklėje jau yra aktyvi \textit{Google} sesija, pakanka ją patvirtinti.
-    \item \textit{Google} grąžina vartotoją į \texttt{redirect\_uri}. Aplikacija patikrina \texttt{state}, iškeičia kodą į žetonus (su \texttt{code\_verifier}), patikrina ID žetoną ir \texttt{nonce}. Tada \textbf{palyginamas ID žetono \texttt{sub} su susietu \texttt{provider\_sub}}. Produkcinėje aplikacijoje papildomai tikrinama, ar \texttt{amr} turi \texttt{mfa}, \texttt{hwk} arba \texttt{swk} ir ar \texttt{auth\_time} pakankamai naujas.
-    \item \textbf{Sėkmė.} Sukuriama nauja sesija su nauju sesijos identifikatoriumi, kad būtų išvengta sesijos fiksavimo (\textit{angl. session fixation}). Atnaujinamas \texttt{last\_used\_at}, laukiančioji būsena ištrinama.
-    \item \textbf{Nesėkmė} (vartotojas atšaukė prisijungimą, \texttt{sub} nesutampa, žetonas netinkamas arba baigėsi laukimo laikas). Prisijungimas atmetamas, įvykis įrašomas į \texttt{auth\_events}, bandymų skaičius ribojamas. Vartotojui išsiunčiamas pranešimas su bandymo laiku, naršykle ir vieta~\cite{VMA}, o prisijungimo lange pasiūloma naudoti atkūrimo kodą.
+    \item Vartotojas įveda el. pašto adresą ir slaptažodį. Klientas iškviečia \texttt{authClient.signIn.email()}.
+    \item Better Auth patikrina slaptažodį (\textit{scrypt} maiša \texttt{account} lentelėje) ir sukuria sesiją.
+    \item Įskiepio \textit{after} perėmimo funkcija pastebi, kad \texttt{user.googleMfaEnabled = true}. Ji ištrina ką tik sukurtą sesiją ir jos slapuką, o \texttt{verification} lentelėje sukuria iššūkį: jo reikšmė -- vartotojo \texttt{id}, galiojimas -- 10 min. Klientui nustatomas pasirašytas iššūkio slapukas ir grąžinamas atsakymas \texttt{googleMfaRedirect: true}. Vartotojas kol kas neprisijungęs.
+    \item Klientas iškviečia \texttt{authClient.signIn.social()} su \texttt{provider = google}. Įskiepio \textit{before} perėmimo funkcija patikrina iššūkio slapuką. Be jo \textit{Google} prisijungimas atmetamas, todėl \textit{Google} negali būti vienintelis prisijungimo būdas. Ji taip pat nustato \texttt{loginHint} -- susietos paskyros \texttt{accountId}, todėl \textit{Google} iš karto pasiūlo teisingą paskyrą~\cite{google_oidc}.
+    \item Better Auth sugeneruoja \texttt{state} ir \texttt{code\_verifier} ir peradresuoja naršyklę į \textit{Google}. Vartotojas prisijungia prie \textit{Google}. Jei naršyklėje jau yra aktyvi \textit{Google} sesija, pakanka ją patvirtinti.
+    \item \textit{Google} grąžina vartotoją į \url{/api/auth/callback/google}. Better Auth patikrina \texttt{state}, iškeičia kodą į žetonus (su \texttt{code\_verifier}), paima \texttt{sub} ir suranda vartotoją pagal susietą paskyrą (\texttt{providerId = google}, \texttt{accountId = sub}). \textit{Google} registracija ir automatinis susiejimas išjungti, todėl nesusieta \textit{Google} paskyra nesukurs naujo vartotojo ir neprisijungs prie kito.
+    \item Radęs vartotoją, Better Auth sukuria sesiją. Tada įskiepio \textit{after} perėmimo funkcija \textbf{palygina rastą vartotoją su iššūkio vartotoju}. Tai ir yra patikra, ar \textit{Google} \texttt{sub} sutampa su susietu.
+    \item \textbf{Sėkmė.} Sesija paliekama. Ji nauja, todėl apsaugo nuo sesijos fiksavimo (\textit{angl. session fixation}). Nustatomas \texttt{session.googleMfaVerifiedAt}, iššūkis ištrinamas, įvykis įrašomas į \texttt{authEvent}.
+    \item \textbf{Nesėkmė} (vartotojas atšaukė prisijungimą, rasta kito vartotojo arba nesusieta paskyra, baigėsi iššūkio laikas). Sesija, jei buvo sukurta, ištrinama, įvykis įrašomas į \texttt{authEvent}, o vartotojas nukreipiamas į prisijungimo puslapį su klaida. Vartotojui išsiunčiamas pranešimas su bandymo laiku, naršykle ir vieta~\cite{VMA}. Bandymų skaičių riboja Better Auth užklausų ribojimas (\textit{angl. rate limiting}).
 \end{enumerate}
 
 \input{figures/prisijungimas}
 
+Produkcinėje aplikacijoje per \texttt{additionalParams} galima perduoti \texttt{claims} parametrą, o \textit{Google} tiekėjo \texttt{getUserInfo} funkcijoje papildomai patikrinti, ar \texttt{amr} turi \texttt{mfa}, \texttt{hwk} arba \texttt{swk} ir ar \texttt{auth\_time} pakankamai naujas (žr.~\ref{subsec:faktorius} poskyrį).
+
 \subsection{Kada dar reikalauti MFA}
 \label{subsec:step_up}
 
-Pagal skaidrių rekomendacijas~\cite{VMA} OAuth patvirtinimas reikalingas ne tik prisijungiant. Tas pats srautas (su \texttt{purpose = step\_up}) naudojamas ir kai vartotojas:
+Pagal skaidrių rekomendacijas~\cite{VMA} \textit{Google} patvirtinimas reikalingas ne tik prisijungiant, bet ir kai vartotojas:
 \begin{itemize}
-    \item keičia slaptažodį arba el. pašto adresą;
-    \item išjungia MFA arba keičia susietą \textit{Google} paskyrą;
+    \item keičia slaptažodį arba el. pašto adresą (\url{/change-password}, \url{/change-email});
+    \item išjungia MFA arba keičia susietą \textit{Google} paskyrą (\url{/google-mfa/disable}, \url{/unlink-account}, \url{/link-social});
     \item sesijoje gauna aukštesnes teises (pvz., administratoriaus).
 \end{itemize}
-Tokiems veiksmams priimamas tik neseniai atliktas patvirtinimas (pvz., per paskutines 5 min.). Be to, MFA turi būti taikomas visiems prisijungimo būdams. Pavyzdžiui, slaptažodžio atkūrimas el. paštu neturi leisti apeiti \textit{Google} žingsnio.
+Šiems maršrutams įskiepio \textit{before} perėmimo funkcija reikalauja, kad \texttt{session.googleMfaVerifiedAt} būtų ne senesnis nei 5 min. Jei jis senesnis, klientas pakartoja \textit{Google} žingsnį (\texttt{signIn.social}), o \textit{after} perėmimo funkcija patikrina, ar \textit{Google} paskyra priklauso dabartinės sesijos vartotojui.
+
+MFA turi būti taikomas visiems prisijungimo būdams. Better Auth konfigūracijoje įjungtas tik el. pašto ir slaptažodžio prisijungimas, o \textit{Google} veikia tik kaip antrasis žingsnis. Be to, slaptažodžio atkūrimas el. paštu neturi automatiškai prijungti vartotojo -- tada po jo prisijungiant vis tiek reikės \textit{Google} žingsnio.
 
 \subsection{Vartotojo patirties gerinimas}
 \label{subsec:rizika}
 
-Dažnas MFA reikalavimas gali erzinti vartotojus, todėl galima taikyti rizika paremtą MFA~\cite{VMA}. Sėkmingai prisijungus, įrenginiui išduodamas pasirašytas „patikimo įrenginio“ slapukas (\texttt{HttpOnly}, \texttt{Secure}, galioja 30 d.). Tada \textit{Google} žingsnio reikalaujama tik jungiantis iš naujo įrenginio ar neįprastos vietos arba po nesėkmingų bandymų.
+Dažnas MFA reikalavimas gali erzinti vartotojus, todėl galima taikyti rizika paremtą MFA~\cite{VMA}. Kaip ir oficialiame \texttt{twoFactor} įskiepyje~\cite{better_auth_2fa}, sėkmingai patvirtinus \textit{Google} žingsnį, įrenginiui galima išduoti pasirašytą „patikimo įrenginio“ slapuką, galiojantį 30 d. Tada \textit{Google} žingsnio reikalaujama tik jungiantis iš naujo įrenginio ar neįprastos vietos arba po nesėkmingų bandymų.
 
 \subsection{MFA atkūrimas}
 \label{subsec:atkurimas}
 
-Praradęs prieigą prie \textit{Google} paskyros, vartotojas negalėtų prisijungti. Todėl numatomi atkūrimo būdai~\cite{VMA}:
-\begin{itemize}
-    \item vienkartiniai atkūrimo kodai, gauti aktyvuojant MFA. Panaudotas kodas pažymimas, o vartotojas raginamas iš naujo susieti \textit{Google} paskyrą;
-    \item galimybė susieti antrą MFA metodą (pvz., TOTP programėlę), kad vieno metodo praradimas neužrakintų paskyros;
-    \item kraštutiniu atveju -- kreipimasis į klientų aptarnavimą, kuris griežtai patikrina vartotojo tapatybę.
-\end{itemize}
+Praradęs prieigą prie \textit{Google} paskyros, vartotojas pirmiausia ją atkuria per \textit{Google} (atkūrimo el. paštu, telefonu ar \textit{Google} atsarginiais kodais). Jei tai neįmanoma, vartotojas kreipiasi į klientų aptarnavimą, kuris griežtai patikrina jo tapatybę ir tik tada išjungia MFA~\cite{VMA}. Atskirų atkūrimo kodų aplikacija nekuria: šiam metodui jie tik dubliuotų \textit{Google} atkūrimą, o kiekvienas papildomas MFA apėjimo būdas yra dar vienas atakos taikinys~\cite{VMA}.
