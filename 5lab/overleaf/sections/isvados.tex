@@ -6,6 +6,5 @@
     \item OAuth 2.0 yra autorizacijos protokolas, todėl autentifikavimui naudojamas jo OpenID Connect sluoksnis ir ID žetonas.
     \item OAuth veikia kaip antrasis faktorius tik tada, kai grįžus iš \textit{Google} rastas vartotojas \emph{palyginamas} su jau slaptažodžiu autentifikuotu vartotoju, o ne tiesiog prijungiamas.
     \item Better Auth įgyvendina visą OAuth srautą (\texttt{state}, PKCE, kodo iškeitimą, paskyrų susiejimą), sesijas ir užklausų ribojimą. Trūksta tik režimo, kai \textit{Google} yra antrasis faktorius, todėl jis pridedamas trimis Better Auth perėmimo funkcijomis pagal oficialaus \texttt{twoFactor} įskiepio principą.
-    \item Duomenų bazėje pakanka Better Auth lentelių su \textit{Google} \texttt{sub} (\texttt{account.accountId}), dviejų papildomų laukų ir įvykių žurnalo. Jokios antrojo faktoriaus paslapties ar \textit{Google} žetonų saugoti nereikia.
-    \item Metodo stiprumas priklauso nuo \textit{Google} paskyros apsaugos, todėl rekomenduojama reikalauti \textit{Google} dviejų veiksmų patvirtinimo. Praradus \textit{Google} paskyrą, ji atkuriama per \textit{Google}, o kraštutiniu atveju -- per klientų aptarnavimą.
+    \item Duomenų bazėje pakanka Better Auth lentelių su \textit{Google} \texttt{sub} (\texttt{account.accountId}) ir vieno papildomo lauko (\texttt{user.googleMfaEnabled}). Jokios antrojo faktoriaus paslapties ar \textit{Google} žetonų saugoti nereikia.
 \end{itemize}

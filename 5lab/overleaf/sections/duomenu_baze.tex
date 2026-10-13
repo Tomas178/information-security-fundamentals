@@ -1,7 +1,7 @@
 \section{Duomenų bazė}
 \label{sec:duomenu_baze}
 
-Better Auth pats sukuria ir valdo keturias pagrindines lenteles: \texttt{user}, \texttt{session}, \texttt{account} ir \texttt{verification}~\cite{better_auth_database}. Antrajam faktoriui \texttt{user} ir \texttt{session} lentelės papildomos po vieną lauką (Better Auth nustatymas \texttt{additionalFields}), o įvykių žurnalui sukuriama atskira aplikacijos lentelė \texttt{authEvent}. Better Auth lentelės kartu su papildomais laukais sugeneruojamos ir pritaikomos Better Auth komandų eilutės įrankiu (\texttt{npx auth@latest migrate}). Lentelių ir laukų pavadinimai rašomi \textit{camelCase} stiliumi, kaip įprasta Better Auth. Laukai aprašyti \ref{tab:db_user}--\ref{tab:db_auth_event} lentelėse.
+Better Auth pats sukuria ir valdo keturias pagrindines lenteles: \texttt{user}, \texttt{session}, \texttt{account} ir \texttt{verification}~\cite{better_auth_database}. MFA papildomai reikia tik vieno lauko \texttt{user} lentelėje, kuris aprašomas Better Auth nustatymu \texttt{additionalFields}. Lentelės kartu su šiuo lauku sugeneruojamos ir pritaikomos Better Auth komandų eilutės įrankiu (\texttt{npx auth@latest migrate}). MFA svarbūs laukai pateikti \ref{tab:db_user}--\ref{tab:db_verification} lentelėse.
 
 OAuth antrajam faktoriui jokios paslapties saugoti nereikia. Pakanka \textit{Google} identifikatoriaus \texttt{sub}, kurį Better Auth saugo \texttt{account.accountId} lauke.
 
@@ -14,11 +14,7 @@ OAuth antrajam faktoriui jokios paslapties saugoti nereikia. Pakanka \textit{Goo
         \textbf{Laukas} & \textbf{Tipas} & \textbf{Paskirtis} \\
         \midrule
         \texttt{id} & string, PK & Vartotojo identifikatorius \\
-        \texttt{name} & string & Vardas \\
         \texttt{email} & string, UNIQUE & Prisijungimo el. paštas \\
-        \texttt{emailVerified} & boolean & Ar el. paštas patvirtintas \\
-        \texttt{image} & string, NULL & Nuotraukos adresas \\
-        \texttt{createdAt}, \texttt{updatedAt} & date & Sukūrimo ir atnaujinimo laikas \\
         \texttt{googleMfaEnabled} & boolean & Papildomas laukas: ar reikalauti \textit{Google} žingsnio \\
         \bottomrule
     \end{tabularx}
@@ -37,29 +33,7 @@ OAuth antrajam faktoriui jokios paslapties saugoti nereikia. Pakanka \textit{Goo
         \texttt{providerId} & string & \texttt{credential} (slaptažodis) arba \texttt{google} \\
         \texttt{accountId} & string & \texttt{google} paskyrai -- \textit{Google} \texttt{sub}. Pagal jį tikrinamas antrasis faktorius \\
         \texttt{password} & string, NULL & Slaptažodžio maiša (\textit{scrypt}), tik \texttt{credential} paskyrai \\
-        \texttt{accessToken}, \texttt{refreshToken}, \texttt{idToken} & string, NULL & \textit{Google} žetonai -- paliekami tušti (žr. žemiau) \\
-        \texttt{createdAt}, \texttt{updatedAt} & date & Sukūrimo ir atnaujinimo laikas \\
-        \bottomrule
-    \end{tabularx}
-\end{table}
-
-Better Auth taip pat turi laukus \texttt{scope}, \texttt{accessTokenExpiresAt} ir \texttt{refreshTokenExpiresAt}, tačiau šiame plane jie nenaudojami. Better Auth neleidžia tos pačios \textit{Google} paskyros (poros \texttt{providerId}, \texttt{accountId}) susieti su keliais vartotojais~\cite{better_auth_accounts}. Papildomai rekomenduojama šiai porai sukurti unikalų indeksą.
-
-\begin{table}[H]
-    \centering
-    \caption{Lentelė \texttt{session} (Better Auth ir papildomas laukas).}
-    \label{tab:db_session}
-    \begin{tabularx}{\textwidth}{l l L}
-        \toprule
-        \textbf{Laukas} & \textbf{Tipas} & \textbf{Paskirtis} \\
-        \midrule
-        \texttt{id} & string, PK & Sesijos identifikatorius \\
-        \texttt{userId} & string, FK & Nuoroda į \texttt{user.id} \\
-        \texttt{token} & string, UNIQUE & Sesijos žetonas, saugomas \texttt{HttpOnly} slapuke \\
-        \texttt{expiresAt} & date & Galiojimo pabaiga (pagal nutylėjimą po 7 d.) \\
-        \texttt{ipAddress}, \texttt{userAgent} & string, NULL & Įrenginio IP adresas ir naršyklė \\
-        \texttt{createdAt}, \texttt{updatedAt} & date & Sukūrimo ir atnaujinimo laikas \\
-        \texttt{googleMfaVerifiedAt} & date, NULL & Papildomas laukas: kada paskutinį kartą patvirtintas \textit{Google} žingsnis \\
+        \texttt{accessToken}, \texttt{refreshToken}, \texttt{idToken} & string, NULL & \textit{Google} žetonai -- nesaugomi, \texttt{databaseHooks} juos pašalina prieš įrašant \\
         \bottomrule
     \end{tabularx}
 \end{table}
@@ -76,35 +50,8 @@ Better Auth taip pat turi laukus \texttt{scope}, \texttt{accessTokenExpiresAt} i
         \texttt{identifier} & string & OAuth \texttt{state} reikšmė arba iššūkio identifikatorius \texttt{google-mfa-}\ldots \\
         \texttt{value} & string & OAuth srauto duomenys (\texttt{code\_verifier}, grįžimo adresas ir kt.) arba iššūkio vartotojo \texttt{id} \\
         \texttt{expiresAt} & date & Galiojimo pabaiga (10 min.) \\
-        \texttt{createdAt}, \texttt{updatedAt} & date & Sukūrimo ir atnaujinimo laikas \\
         \bottomrule
     \end{tabularx}
 \end{table}
 
-Įrašai iš \texttt{verification} lentelės ištrinami iš karto po panaudojimo~\cite{better_auth_security}. Slapukuose laikomi tik pasirašyti identifikatoriai. Jei naudojamas „patikimo įrenginio“ slapukas (žr.~\ref{subsec:rizika} poskyrį), jo įrašai taip pat laikomi šioje lentelėje.
-
-\begin{table}[H]
-    \centering
-    \caption{Lentelė \texttt{authEvent} (aplikacijos autentifikavimo įvykių žurnalas).}
-    \label{tab:db_auth_event}
-    \begin{tabularx}{\textwidth}{l l L}
-        \toprule
-        \textbf{Laukas} & \textbf{Tipas} & \textbf{Paskirtis} \\
-        \midrule
-        \texttt{id} & string, PK & Įrašo identifikatorius \\
-        \texttt{userId} & string, FK & Nuoroda į \texttt{user.id} \\
-        \texttt{type} & string & \texttt{mfa\_enabled}, \texttt{mfa\_success}, \texttt{mfa\_failed}, \texttt{mfa\_disabled} \\
-        \texttt{ipAddress} & string & IP adresas (vietai nurodyti pranešime vartotojui) \\
-        \texttt{userAgent} & string & Naršyklė ir įrenginys \\
-        \texttt{createdAt} & date & Įvykio laikas \\
-        \bottomrule
-    \end{tabularx}
-\end{table}
-
-\textbf{Kas nesaugoma.} Laikantis duomenų kiekio mažinimo principo~\cite{bdar}, nesaugomi:
-\begin{itemize}
-    \item \textit{Google} slaptažodis -- aplikacija jo niekada nemato;
-    \item \textit{Google} prieigos, atnaujinimo (\textit{angl. refresh}) ir ID žetonai. Better Auth pagal nutylėjimą juos saugo neužšifruotus \texttt{account} lentelėje, todėl \texttt{databaseHooks.account} \textit{before} funkcijos juos pašalina prieš įrašant. Antrajam faktoriui jie nereikalingi. Jei žetonų prireiktų, juos galima užšifruoti nustatymu \texttt{account.encryptOAuthTokens}~\cite{better_auth_options}.
-\end{itemize}
-
-\textbf{Konfigūracija.} \texttt{BETTER\_AUTH\_SECRET} (slapukų pasirašymo ir šifravimo raktas), \texttt{BETTER\_AUTH\_URL} (bazinis adresas, iš kurio sudaromas \texttt{redirect\_uri}), \texttt{GOOGLE\_CLIENT\_ID} ir \texttt{GOOGLE\_CLIENT\_SECRET} laikomi aplinkos kintamuosiuose arba slaptųjų duomenų saugykloje, ne duomenų bazėje. Jie niekada neturi patekti į naršyklę ar kodo repozitoriją.
+Įrašai iš \texttt{verification} lentelės ištrinami iš karto po panaudojimo~\cite{better_auth_security}. Slapukuose laikomi tik pasirašyti identifikatoriai.
