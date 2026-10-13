@@ -12,9 +12,6 @@
 \usepackage{longtable}
 \usepackage{booktabs}
 \usepackage{tabularx}
-\usepackage{adjustbox}
-\usepackage{tikz}
-\usetikzlibrary{arrows.meta, positioning, calc}
 
 \usepackage{titlesec}
 \newcommand{\sectionbreak}{\clearpage}
@@ -26,18 +23,6 @@
 
 % Lentelių stulpelis, kuriame tekstas lygiuojamas pagal kairę
 \newcolumntype{L}{>{\raggedright\arraybackslash}X}
-
-% Sekų diagramų stiliai
-\tikzset{
-    actor/.style={draw, rounded corners, fill=gray!10, minimum width=3.2cm,
-        minimum height=1cm, align=center, font=\small\bfseries},
-    lifeline/.style={dashed, gray},
-    msg/.style={-{Stealth[length=2.5mm]}, thick},
-    ret/.style={-{Stealth[length=2.5mm]}, thick, dashed},
-    lbl/.style={font=\footnotesize, align=center, fill=white, inner sep=1.5pt},
-    note/.style={draw, fill=yellow!15, font=\footnotesize, align=left,
-        inner sep=3pt},
-}
 
 \bibliography{bibliografija}
 

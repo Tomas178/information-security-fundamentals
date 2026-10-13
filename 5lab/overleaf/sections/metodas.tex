@@ -54,7 +54,7 @@ Antrojo faktoriaus stiprumas priklauso nuo to, kaip \textit{Google} autentifikuo
 \subsection{Autorizacijos kodo srautas su PKCE}
 \label{subsec:srautas}
 
-Naudojamas autorizacijos kodo srautas (\textit{angl. Authorization Code Flow}) su PKCE (\textit{angl. Proof Key for Code Exchange})~\cite{rfc7636}. Būtent šį srautą siūlo OAuth 2.0 saugumo gerųjų praktikų dokumentas RFC~9700, o netiesioginio (\textit{angl. implicit}) srauto jame naudoti nebepatariama~\cite{rfc9700}. Srauto žingsniai (\ref{fig:oidc_srautas} pav.):
+Naudojamas autorizacijos kodo srautas (\textit{angl. Authorization Code Flow}) su PKCE (\textit{angl. Proof Key for Code Exchange})~\cite{rfc7636}. Būtent šį srautą siūlo OAuth 2.0 saugumo gerųjų praktikų dokumentas RFC~9700, o netiesioginio (\textit{angl. implicit}) srauto jame naudoti nebepatariama~\cite{rfc9700}. Srauto žingsniai:
 \begin{enumerate}
     \item Aplikacija sugeneruoja dvi atsitiktines reikšmes -- \texttt{state} ir \texttt{code\_verifier} -- ir išsaugo jas serverio pusėje. Iš \texttt{code\_verifier} apskaičiuojamas \texttt{code\_challenge} = BASE64URL(SHA-256(\texttt{code\_verifier})). OpenID Connect numato ir \texttt{nonce}, tačiau autorizacijos kodo sraute jis neprivalomas~\cite{oidc_core}, nes nuo kodo įterpimo apsaugo PKCE~\cite{rfc9700}. Better Auth \textit{Google} peradresavimo sraute \texttt{nonce} nenaudoja.
     \item Naršyklė peradresuojama į \textit{Google} autorizacijos galinį tašką (\textit{angl. authorization endpoint}) su \texttt{state} ir \texttt{code\_challenge}.
@@ -64,8 +64,6 @@ Naudojamas autorizacijos kodo srautas (\textit{angl. Authorization Code Flow}) s
     \item \textit{Google} grąžina ID žetoną ir prieigos žetoną.
     \item Aplikacija iš ID žetono paima \texttt{sub}. Žetonas gautas tiesiai iš \textit{Google} žetonų galinio taško per TLS, todėl OpenID Connect leidžia vietoj parašo tikrinimo pasikliauti TLS serverio patikra~\cite{oidc_core}. Jei ID žetonas gaunamas per naršyklę, būtina patikrinti jo parašą pagal \textit{Google} viešuosius raktus (JWKS) ir laukus \texttt{iss}, \texttt{aud}, \texttt{exp}.
 \end{enumerate}
-
-\input{figures/oidc_srautas}
 
 Autorizacijos užklausos, kurią Better Auth sudaro antrojo faktoriaus žingsnyje, pavyzdys (reikšmės sutrumpintos, \texttt{code\_challenge} paimtas iš RFC~7636 pavyzdžio~\cite{rfc7636}):
 

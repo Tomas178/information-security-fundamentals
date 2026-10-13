@@ -1,11 +1,9 @@
 \section{Duomenų bazė}
 \label{sec:duomenu_baze}
 
-Better Auth pats sukuria ir valdo keturias pagrindines lenteles: \texttt{user}, \texttt{session}, \texttt{account} ir \texttt{verification}~\cite{better_auth_database}. Įskiepis \texttt{googleMfa} prideda du laukus ir vieną lentelę. Schema sugeneruojama ir pritaikoma Better Auth komandų eilutės įrankiu (\texttt{npx auth@latest migrate}). Lentelių ir laukų pavadinimai rašomi \textit{camelCase} stiliumi, kaip įprasta Better Auth. Schema pavaizduota \ref{fig:db_schema} pav., o laukai aprašyti \ref{tab:db_user}--\ref{tab:db_auth_event} lentelėse.
+Better Auth pats sukuria ir valdo keturias pagrindines lenteles: \texttt{user}, \texttt{session}, \texttt{account} ir \texttt{verification}~\cite{better_auth_database}. Įskiepis \texttt{googleMfa} prideda du laukus ir vieną lentelę. Schema sugeneruojama ir pritaikoma Better Auth komandų eilutės įrankiu (\texttt{npx auth@latest migrate}). Lentelių ir laukų pavadinimai rašomi \textit{camelCase} stiliumi, kaip įprasta Better Auth. Laukai aprašyti \ref{tab:db_user}--\ref{tab:db_auth_event} lentelėse.
 
 OAuth antrajam faktoriui jokios paslapties saugoti nereikia. Pakanka \textit{Google} identifikatoriaus \texttt{sub}, kurį Better Auth saugo \texttt{account.accountId} lauke.
-
-\input{figures/db_schema}
 
 \begin{table}[H]
     \centering

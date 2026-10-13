@@ -4,7 +4,7 @@
 \subsection{Prisijungimo eiga}
 \label{subsec:prisijungimas}
 
-Vartotojas, kuriam MFA aktyvuotas, prisijungia dviem žingsniais (\ref{fig:prisijungimas} pav.). Įskiepis \texttt{googleMfa} veikia tuo pačiu principu kaip oficialus Better Auth \texttt{twoFactor} įskiepis: po slaptažodžio patikros sesija iš karto pakeičiama trumpalaikiu iššūkiu (\textit{angl. challenge})~\cite{better_auth_2fa}.
+Vartotojas, kuriam MFA aktyvuotas, prisijungia dviem žingsniais. Įskiepis \texttt{googleMfa} veikia tuo pačiu principu kaip oficialus Better Auth \texttt{twoFactor} įskiepis: po slaptažodžio patikros sesija iš karto pakeičiama trumpalaikiu iššūkiu (\textit{angl. challenge})~\cite{better_auth_2fa}.
 \begin{enumerate}
     \item Vartotojas įveda el. pašto adresą ir slaptažodį. Klientas iškviečia \texttt{authClient.signIn.email()}.
     \item Better Auth patikrina slaptažodį (\textit{scrypt} maiša \texttt{account} lentelėje) ir sukuria sesiją.
@@ -16,8 +16,6 @@ Vartotojas, kuriam MFA aktyvuotas, prisijungia dviem žingsniais (\ref{fig:prisi
     \item \textbf{Sėkmė.} Sesija paliekama. Ji nauja, todėl apsaugo nuo sesijos fiksavimo (\textit{angl. session fixation}). Nustatomas \texttt{session.googleMfaVerifiedAt}, iššūkis ištrinamas, įvykis įrašomas į \texttt{authEvent}.
     \item \textbf{Nesėkmė} (vartotojas atšaukė prisijungimą, rasta kito vartotojo arba nesusieta paskyra, baigėsi iššūkio laikas). Sesija, jei buvo sukurta, ištrinama, įvykis įrašomas į \texttt{authEvent}, o vartotojas nukreipiamas į prisijungimo puslapį su klaida. Vartotojui išsiunčiamas pranešimas su bandymo laiku, naršykle ir vieta~\cite{VMA}. Bandymų skaičių riboja Better Auth užklausų ribojimas (\textit{angl. rate limiting}).
 \end{enumerate}
-
-\input{figures/prisijungimas}
 
 Produkcinėje aplikacijoje per \texttt{additionalParams} galima perduoti \texttt{claims} parametrą, o \textit{Google} tiekėjo \texttt{getUserInfo} funkcijoje papildomai patikrinti, ar \texttt{amr} turi \texttt{mfa}, \texttt{hwk} arba \texttt{swk} ir ar \texttt{auth\_time} pakankamai naujas (žr.~\ref{subsec:faktorius} poskyrį).
 

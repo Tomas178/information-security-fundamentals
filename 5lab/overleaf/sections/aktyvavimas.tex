@@ -1,7 +1,7 @@
 \section{MFA aktyvavimas}
 \label{sec:aktyvavimas}
 
-MFA gali aktyvuoti tik prisijungęs vartotojas. Aktyvavimo metu jo paskyra susiejama su \textit{Google} paskyra: Better Auth \texttt{account} lentelėje sukuria įrašą, kurio \texttt{providerId} yra \texttt{google}, o \texttt{accountId} -- \textit{Google} \texttt{sub}~\cite{better_auth_accounts}. Aktyvavimo seka pavaizduota \ref{fig:aktyvavimas} pav.:
+MFA gali aktyvuoti tik prisijungęs vartotojas. Aktyvavimo metu jo paskyra susiejama su \textit{Google} paskyra: Better Auth \texttt{account} lentelėje sukuria įrašą, kurio \texttt{providerId} yra \texttt{google}, o \texttt{accountId} -- \textit{Google} \texttt{sub}~\cite{better_auth_accounts}. Aktyvavimo žingsniai:
 \begin{enumerate}
     \item Vartotojas nustatymų skiltyje „Saugumas“ paspaudžia „Įjungti MFA per Google“. Klientas iškviečia Better Auth \texttt{authClient.linkSocial()} su \texttt{provider = google}.
     \item Įskiepio \texttt{googleMfa} \textit{before} perėmimo funkcija (\textit{angl. hook}) patikrina, ar sesija šviežia, t.~y. sukurta ne seniau nei prieš 10 min. Jei ne, vartotojas paprašomas iš naujo prisijungti slaptažodžiu. Taip kitas asmuo negalės įjungti MFA pasinaudojęs palikta atvira sesija.
@@ -13,7 +13,5 @@ MFA gali aktyvuoti tik prisijungęs vartotojas. Aktyvavimo metu jo paskyra susie
     \item Klientas iškviečia įskiepio maršrutą \texttt{authClient.googleMfa.enable()}. Įskiepis patikrina, ar vartotojas turi susietą \textit{Google} paskyrą, nustato \texttt{user.googleMfaEnabled = true} ir įrašo įvykį į \texttt{authEvent} lentelę.
     \item Vartotojui išsiunčiamas el. laiškas „MFA įjungtas“. Jei MFA įjungė ne jis, apie tai sužinos iš karto.
 \end{enumerate}
-
-\input{figures/aktyvavimas}
 
 MFA išjungimui ir susietos \textit{Google} paskyros pakeitimui reikalingas pakartotinis \textit{Google} patvirtinimas (žr.~\ref{subsec:step_up} poskyrį). Kitaip užpuolikas, sužinojęs tik slaptažodį, galėtų MFA tiesiog išjungti.
