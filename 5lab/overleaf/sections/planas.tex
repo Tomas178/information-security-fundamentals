@@ -7,13 +7,13 @@
 TOTP -- skaitmeninių vienkartinių slaptažodžių metodas, priklausantis autentifikavimo tipui \emph{tai, ką vartotojas turi}~\cite{VMA}. Kodus generuoja ne atskiras fizinis įrenginys, o nemokama autentifikatoriaus programėlė telefone (\textit{Google Authenticator}, \textit{Microsoft Authenticator}, \textit{Aegis} ir kt.).
 
 Aktyvuojant MFA, serveris sugeneruoja atsitiktinę paslaptį $K$ ir vieną kartą perduoda ją programėlei QR kodu. Vėliau serveris ir telefonas kodus skaičiuoja kiekvienas atskirai -- tik iš $K$ ir dabartinio laiko $t$, todėl ryšio tarp jų nereikia:
-\begin{equation*}
+\begin{equation}
     T = \left\lfloor \frac{t}{30} \right\rfloor, \qquad
     \text{TOTP}(K, T) = \text{Truncate}\bigl(\text{HMAC-SHA-1}(K, T)\bigr) \bmod 10^{6}.
-\end{equation*}
+\end{equation}
 Čia $t$ -- sekundžių skaičius nuo 1970-01-01 (Unix laikas), $T$ -- 30 sekundžių laiko intervalo numeris, o Truncate -- HOTP algoritmo dinaminis trumpinimas (\textit{angl. dynamic truncation}): paskutinio HMAC baito keturi jaunesnieji bitai nurodo poziciją, nuo kurios paimami 4 baitai ir paverčiami 31 bito skaičiumi. Rezultatas -- 6 skaitmenų kodas, kuris keičiasi kas 30 sekundžių.
 
-Tikrindamas įvestą kodą, serveris apskaičiuoja intervalų $T-1$, $T$ ir $T+1$ kodus. Taip kompensuojamas iki 30 sekundžių telefono ir serverio laikrodžių nesutapimas bei kodo įvedimo trukmė. RFC~6238 rekomenduoja leisti ne didesnį kaip vieno intervalo nuokrypį. Kad kodas būtų tikrai vienkartinis, serveris įsimena paskutinio priimto kodo intervalą ir to paties ar ankstesnio intervalo kodų nebepriima.
+Tikrindamas įvestą kodą, serveris apskaičiuoja intervalų $T-1$, $T$ ir $T+1$ kodus. Taip kompensuojamas iki 30 sekundžių telefono ir serverio laikrodžių nesutapimas bei kodo įvedimo trukmė. Kad kodas būtų tikrai vienkartinis, serveris įsimena paskutinio priimto kodo intervalą ir to paties ar ankstesnio intervalo kodų nebepriima.
 
 Pagal skaidres~\cite{VMA}, šio metodo privalumai -- nereikia išduoti fizinių kodų generatorių, daugelis vartotojų programėlę jau turi, o užrakintas telefono ekranas neleidžia užpuolikui pamatyti kodo. Trūkumai -- praradęs telefoną vartotojas negali prisijungti, o \textit{phishing} ataka gali išvilioti kodą, nors jis galioja tik trumpai.
 
@@ -23,7 +23,7 @@ Pagal skaidres~\cite{VMA}, šio metodo privalumai -- nereikia išduoti fizinių 
 MFA gali aktyvuoti tik prisijungęs vartotojas, kuriam MFA dar neįjungtas. Aktyvavimo žingsniai:
 \begin{enumerate}
     \item Vartotojas paskyros nustatymuose pasirenka „Įjungti MFA“.
-    \item Serveris sugeneruoja 160 bitų atsitiktinę paslaptį $K$ (tokį ilgį rekomenduoja RFC~4226), ją užšifruoja ir išsaugo vartotojo įraše. Laukas \texttt{mfaEnabled} lieka \texttt{false}, todėl prisijungimas kol kas nesikeičia.
+    \item Serveris sugeneruoja 160 bitų atsitiktinę paslaptį $K$, ją užšifruoja ir išsaugo vartotojo įraše. Laukas \texttt{mfaEnabled} lieka \texttt{false}, todėl prisijungimas kol kas nesikeičia.
     \item Serveris parodo QR kodą (žr.~\ref{fig:qr} pav.). Jame užkoduotas \textit{Key URI} formato adresas~\cite{key_uri}, pavyzdžiui, \nolinkurl{otpauth://totp/ISP:tomas?issuer=ISP&secret=...&algorithm=SHA1&digits=6&period=30}. Šalia parodoma ir pati paslaptis Base32 formatu, kad ją būtų galima įvesti ranka, jei QR kodo nuskenuoti nepavyksta.
     \item Vartotojas nuskenuoja QR kodą autentifikatoriaus programėle ir įveda jos rodomą 6 skaitmenų kodą.
     \item Serveris kodą patikrina taip pat, kaip prisijungiant (žr.~\ref{subsec:autentifikavimas} poskyrį). Jei kodas teisingas, nustatoma \texttt{mfaEnabled = true}, o kodo intervalas įrašomas į \texttt{lastUsedStep}, todėl tuo pačiu kodu prisijungti nebebus galima. Jei kodas neteisingas, MFA lieka išjungtas ir vartotojas gali bandyti dar kartą.
@@ -68,17 +68,17 @@ Vartotojų lentelėje, be vartotojo vardo ir slaptažodžio Argon2id maišos (\t
     \end{tabularx}
 \end{table}
 
-Skirtingai nei slaptažodžio, paslapties $K$ negalima saugoti maišos pavidalu: serveriui reikia pačios $K$, kad apskaičiuotų laukiamus kodus. Todėl $K$ saugoma užšifruota, o šifravimo raktas laikomas ne duomenų bazėje, o aplinkos kintamajame arba raktų saugykloje. Nutekėjus vien duomenų bazei, paslaptys lieka neatskleistos. Paslapčių šifravimą rekomenduoja ir RFC~6238.
+Skirtingai nei slaptažodžio, paslapties $K$ negalima saugoti maišos pavidalu: serveriui reikia pačios $K$, kad apskaičiuotų laukiamus kodus. Todėl $K$ saugoma užšifruota, o šifravimo raktas laikomas ne duomenų bazėje, o aplinkos kintamajame arba raktų saugykloje. Nutekėjus vien duomenų bazei, paslaptys lieka neatskleistos.
 
 \subsection{Naudojamos bibliotekos}
 \label{subsec:biblioteka}
 
 Serveris rašomas TypeScript kalba (Node.js). Naudojamos bibliotekos:
 \begin{itemize}
-    \item \textbf{otpauth}~\cite{otpauth} -- pagrindinė MFA biblioteka: atsitiktinės paslapties generavimas (\texttt{Secret}), TOTP kodų generavimas ir tikrinimas su laiko langu (\texttt{validate}), \texttt{otpauth://} adreso kūrimas ir nuskaitymas. Biblioteka įgyvendina RFC~4226 ir RFC~6238, o kodus lygina pastovaus laiko palyginimu;
+    \item \textbf{otpauth}~\cite{otpauth} -- pagrindinė MFA biblioteka: atsitiktinės paslapties generavimas (\texttt{Secret}), TOTP kodų generavimas ir tikrinimas su laiko langu (\texttt{validate}), \texttt{otpauth://} adreso kūrimas ir nuskaitymas.
     \item \textbf{qrcode}~\cite{node_qrcode} -- QR kodo generavimas iš \texttt{otpauth://} adreso (PNG failas arba \texttt{data:} URL, kurį naršyklė parodo kaip paveikslėlį);
     \item \textbf{argon2}~\cite{node_argon2} -- slaptažodžių maišos Argon2id algoritmu (pirmajam faktoriui);
     \item \textbf{node:crypto} -- standartinis Node.js modulis, kuriuo paslaptis $K$ šifruojama AES-256-GCM.
 \end{itemize}
 
-Vartotojo pusėje tinka bet kuri RFC~6238 palaikanti autentifikatoriaus programėlė. Išorinio serviso nereikia: kitaip nei SMS ar el. pašto atveju, kodų niekas nesiunčia, todėl nėra nei siuntimo kaštų, nei priklausomybės nuo ryšio~\cite{VMA}.
+Išorinio serviso nereikia: kitaip nei SMS ar el. pašto atveju, kodų niekas nesiunčia, todėl nėra nei siuntimo kaštų, nei priklausomybės nuo ryšio~\cite{VMA}.
