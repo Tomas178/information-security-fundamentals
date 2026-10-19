@@ -5,6 +5,6 @@
 \begin{itemize}
     \item TOTP antrajam faktoriui nereikia jokio išorinio serviso: serveris ir telefonas kodus skaičiuoja kiekvienas atskirai, iš bendros paslapties ir dabartinio laiko.
     \item Paslapties $K$, kitaip nei slaptažodžio, negalima saugoti maišos pavidalu, todėl duomenų bazėje ji saugoma užšifruota, o šifravimo raktas laikomas atskirai.
-    \item Leidžiamas vieno intervalo nuokrypis kompensuoja laikrodžių nesutapimą, tačiau tada kodas tinka iki 90 sekundžių, o vienu metu tinka trys skirtingi kodai. Todėl serveris kiekvieną kodą priima tik vieną kartą ir riboja nesėkmingų bandymų skaičių.
+    \item Leidžiamas vieno intervalo nuokrypis kompensuoja laikrodžių nesutapimą, tačiau tada kodas tinka iki $90$ sekundžių, o vienu metu tinka trys skirtingi kodai. Todėl serveris kiekvieną kodą priima tik vieną kartą ir riboja nesėkmingų bandymų skaičių.
     \item Su \textit{otpauth}, \textit{qrcode} ir \textit{argon2} bibliotekomis planas realizuotas nedidele programa. Jos rezultatai patvirtina, kad aktyvavimas, prisijungimas, pakartotinio kodo atmetimas ir paskyros blokavimas veikia taip, kaip suplanuota.
 \end{itemize}
