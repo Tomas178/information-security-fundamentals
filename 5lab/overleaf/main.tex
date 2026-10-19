@@ -12,6 +12,8 @@
 \usepackage{longtable}
 \usepackage{booktabs}
 \usepackage{tabularx}
+\usepackage{listings}
+\usepackage{fancyvrb}
 
 \usepackage{titlesec}
 \newcommand{\sectionbreak}{\clearpage}
@@ -24,12 +26,37 @@
 % Lentelių stulpelis, kuriame tekstas lygiuojamas pagal kairę
 \newcolumntype{L}{>{\raggedright\arraybackslash}X}
 
+% TypeScript kodo ištraukoms (listings paketas šios kalbos neturi)
+\lstdefinelanguage{TypeScript}{
+    morekeywords={async, await, boolean, const, else, export, false, for, function,
+        if, interface, let, new, null, number, return, string, throw, true,
+        void},
+    sensitive=true,
+    morecomment=[l]{//},
+    morecomment=[s]{/*}{*/},
+    morestring=[b]',
+    morestring=[b]",
+    morestring=[b]`,
+}
+\lstset{
+    language=TypeScript,
+    basicstyle=\ttfamily\footnotesize\setstretch{1},
+    keywordstyle=\color[rgb]{0,0,0.6},
+    commentstyle=\color[gray]{0.45},
+    stringstyle=\color[rgb]{0.6,0.1,0.1},
+    frame=single,
+    columns=fullflexible,
+    keepspaces=true,
+    showstringspaces=false,
+    breaklines=true,
+}
+
 \bibliography{bibliografija}
 
 \studijuprograma{Informacinių sistemų inžinerijos}
 \darbotipas{Laboratorinis darbas}
-\darbopavadinimas{Daugiafaktorinis autentifikavimas: OAuth 2.0 (OpenID Connect) MFA implementavimo planas}
-\darbopavadinimasantras{Multi-Factor Authentication: OAuth 2.0 (OpenID Connect) Implementation Plan}
+\darbopavadinimas{Daugiafaktorinis autentifikavimas: TOTP implementavimo planas ir realizacija}
+\darbopavadinimasantras{Multi-Factor Authentication: TOTP Implementation Plan and Prototype}
 \autorius{Tomas Petronis}
 
 \vadovas{Rolandas Gricius}
@@ -44,11 +71,8 @@
 \onehalfspacing
 
 \input{sections/uzduoties_tikslas}
-\input{sections/metodas}
-\input{sections/aktyvavimas}
-\input{sections/autentifikavimas}
-\input{sections/duomenu_baze}
-\input{sections/biblioteka}
+\input{sections/planas}
+\input{sections/realizacija}
 \input{sections/isvados}
 
 \singlespacing

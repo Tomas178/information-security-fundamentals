@@ -1,0 +1,174 @@
+\section{Realizacija}
+\label{sec:realizacija}
+
+Planas realizuotas TypeScript kalba, naudojant \ref{subsec:biblioteka} poskyryje išvardytas bibliotekas. Programa padalyta į modulius pagal atsakomybes (\ref{tab:moduliai} lentelė): pagrindinis failas \texttt{main.ts}, o kiti moduliai -- kataloge \texttt{code}. Programa paleidžiama komanda \texttt{npx tsx 5lab/main.ts}.
+
+\begin{table}[H]
+    \centering
+    \caption{Programos moduliai.}
+    \label{tab:moduliai}
+    \begin{tabularx}{\textwidth}{l L}
+        \toprule
+        \textbf{Failas} & \textbf{Paskirtis} \\
+        \midrule
+        \texttt{code/interfaces.ts} & Vartotojo įrašo tipas \texttt{User} (\ref{tab:db} lentelės laukai ir \texttt{passwordHash}) \\
+        \texttt{code/users-db.ts} & Vartotojų „duomenų bazė“ ir registracija (\texttt{register}) \\
+        \texttt{code/secret-encryption.ts} & Paslapties šifravimas ir iššifravimas (\texttt{encrypt}, \texttt{decrypt}) \\
+        \texttt{code/totp-verification.ts} & TOTP kodo tikrinimas (\texttt{acceptedStep}) \\
+        \texttt{code/mfa-activation.ts} & MFA aktyvavimas (\texttt{mfaSetup}, \texttt{mfaConfirm}) \\
+        \texttt{code/login.ts} & Prisijungimas ir blokavimas (\texttt{login}, \texttt{recordFailure}) \\
+        \texttt{main.ts} & Demonstracinis scenarijus, kurio išvestis pateikta \ref{subsec:rezultatai} poskyryje \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+Palyginti su planu, realizacija supaprastinta:
+\begin{itemize}
+    \item vietoj duomenų bazės naudojama \texttt{Map} struktūra, kurios raktas -- vartotojo vardas, o reikšmė -- \texttt{passwordHash} ir \ref{tab:db} lentelės laukai;
+    \item nėra HTTP sąsajos ir sesijų, todėl abu prisijungimo žingsniai sujungti į vieną funkciją \texttt{login};
+    \item šifravimo raktas sugeneruojamas paleidus programą, o el. laiškai nesiunčiami.
+\end{itemize}
+
+Paslaptis šifruojama ir iššifruojama pagalbinėmis funkcijomis \texttt{encrypt} ir \texttt{decrypt}: naudojamas AES-256-GCM su atsitiktiniu 96 bitų IV, o duomenų bazėje saugomi IV, autentifikavimo žyma ir šifrograma, atskirti dvitaškiais.
+
+\subsection{MFA aktyvavimas}
+\label{subsec:realizacija_aktyvavimas}
+
+Funkcija \texttt{mfaSetup} sugeneruoja paslaptį, išsaugo ją užšifruotą ir sukuria QR kodą. Funkcija \texttt{mfaConfirm} įjungia MFA tik tada, kai vartotojas įveda teisingą pirmą kodą.
+
+\begin{lstlisting}
+export async function mfaSetup(username: string): Promise<string> {
+  const user = users.get(username)!;
+  if (user.mfaEnabled) {
+    throw new Error('MFA is already enabled');
+  }
+
+  const totp = new TOTP({
+    issuer: ISSUER,
+    label: username,
+    secret: new Secret({ size: 20 }),
+  });
+  // Saved now, but MFA stays off until the user confirms the first code.
+  user.totpSecret = encrypt(totp.secret.base32);
+
+  const uri = totp.toString();
+  await QRCode.toFile(QR_CODE_FILE, uri, { scale: 8 });
+  return uri;
+}
+
+export function mfaConfirm(username: string, code: string): boolean {
+  const user = users.get(username)!;
+  if (user.mfaEnabled) {
+    return false;
+  }
+
+  const step = acceptedStep(user, code);
+  if (step === null) {
+    return false;
+  }
+  user.mfaEnabled = true;
+  user.lastUsedStep = step;
+  return true;
+}
+\end{lstlisting}
+
+\subsection{Autentifikavimas}
+\label{subsec:realizacija_autentifikavimas}
+
+Kodą tikrina funkcija \texttt{acceptedStep}, kurią naudoja ir aktyvavimas, ir prisijungimas. Ji grąžina priimto kodo laiko intervalą arba \texttt{null}, jei kodas neteisingas arba jau panaudotas.
+
+\begin{lstlisting}
+export function acceptedStep(user: User, code: string): number | null {
+  if (user.totpSecret === null) {
+    return null;
+  }
+
+  const totp = new TOTP({ secret: decrypt(user.totpSecret) });
+  const now = Date.now();
+  const delta = totp.validate({ token: code, timestamp: now, window: 1 });
+  if (delta === null) {
+    return null;
+  }
+
+  const step = totp.counter({ timestamp: now }) + delta;
+  return step > user.lastUsedStep ? step : null;
+}
+\end{lstlisting}
+
+Funkcija \texttt{login} pirmiausia patikrina, ar paskyra neužblokuota, tada slaptažodį ir tik po to TOTP kodą. Kiekvieną nesėkmę užfiksuoja funkcija \texttt{recordFailure}.
+
+\begin{lstlisting}
+export async function login(
+  username: string,
+  password: string,
+  code: string
+): Promise<boolean> {
+  const user = users.get(username);
+  if (!user || Date.now() < user.lockedUntil) {
+    return false;
+  }
+
+  // Factor 1: the password, checked against its Argon2id hash.
+  if (!(await argon2.verify(user.passwordHash, password))) {
+    recordFailure(user);
+    return false;
+  }
+
+  // Factor 2: the server computes the expected codes itself and compares.
+  if (user.mfaEnabled) {
+    const step = acceptedStep(user, code);
+    if (step === null) {
+      recordFailure(user);
+      return false;
+    }
+    user.lastUsedStep = step;
+  }
+
+  user.failedAttempts = 0;
+  return true;
+}
+
+function recordFailure(user: User): void {
+  user.failedAttempts++;
+  if (user.failedAttempts >= MAX_FAILED_ATTEMPTS) {
+    user.failedAttempts = 0;
+    user.lockedUntil = Date.now() + LOCK_DURATION_MS;
+  }
+}
+\end{lstlisting}
+
+\subsection{Rezultatai}
+\label{subsec:rezultatai}
+
+Programa užregistruoja vartotoją, aktyvuoja jam MFA ir išbando kelis prisijungimo atvejus. Autentifikatoriaus programėlę imituoja \texttt{TOTP} objektas, sukurtas vien iš QR kode esančio \texttt{otpauth://} adreso. Programos išvestis:
+
+\begin{Verbatim}[frame=single, fontsize=\footnotesize, formatcom=\setstretch{1}]
+Secret for manual entry: 2QQO6FQ7ZNQHMVVV5XBAAFLH5ME23YJD
+QR code saved: totp-qr.png
+DB field totpSecret: 3chGKc/fG9GG1sAS:cm++vQcJdcTftoHnS4w1uA=...
+Activation with wrong code 123456 -> rejected
+Activation with code 810340 -> accepted
+Login with wrong password and code 025236 -> rejected
+Login with already used code 810340 -> rejected
+Login with next-step code 025236 -> accepted
+5 wrong codes in a row -> account locked until 21:21:40
+\end{Verbatim}
+
+\ref{fig:qr} pav. pateiktame QR kode užkoduotas \texttt{otpauth://} adresas su ta pačia paslaptimi, kuri išvestyje parodyta rankiniam įvedimui.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=4cm]{images/totp-qr.png}
+    \caption{Programos sugeneruotas aktyvavimo QR kodas.}
+    \label{fig:qr}
+\end{figure}
+
+Rezultatai atitinka planą:
+\begin{itemize}
+    \item duomenų bazėje paslaptis saugoma užšifruota, o ne Base32 pavidalu;
+    \item neteisingas pirmasis kodas MFA neįjungia;
+    \item su neteisingu slaptažodžiu prisijungti nepavyksta net su tinkamu kodu -- tas pats kodas po to priimamas su teisingu slaptažodžiu;
+    \item aktyvavimo kodas antrą kartą nepriimamas, nors pagal laiką jis dar tinkamas;
+    \item kodas, kurį programėlė rodytų tik po 30 sekundžių, priimamas dėl leidžiamo vieno intervalo nuokrypio;
+    \item po 5 neteisingų kodų iš eilės paskyra užblokuojama 15 minučių.
+\end{itemize}
