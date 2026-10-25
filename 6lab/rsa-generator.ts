@@ -37,6 +37,7 @@ export function encrypt(message: bigint, { e, n }: PublicKey): bigint {
   if (message >= n) {
     throw new Error('Message must be smaller than n');
   }
+
   return modPow(message, e, n);
 }
 

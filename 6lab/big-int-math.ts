@@ -18,7 +18,9 @@ export function integerRoot(value: bigint, degree: bigint): bigint {
 }
 
 export function pollardRho(n: bigint): bigint {
-  if (n % 2n === 0n) return 2n;
+  if (n % 2n === 0n) {
+    return 2n;
+  }
 
   for (let c = 1n; ; c++) {
     const next = (x: bigint) => (x * x + c) % n;
@@ -32,6 +34,8 @@ export function pollardRho(n: bigint): bigint {
       divisor = gcd(tortoise > hare ? tortoise - hare : hare - tortoise, n);
     }
 
-    if (divisor !== n) return divisor;
+    if (divisor !== n) {
+      return divisor;
+    }
   }
 }

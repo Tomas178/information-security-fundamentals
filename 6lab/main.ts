@@ -46,6 +46,7 @@ function smallMessageAttack(cipher: bigint, { e }: PublicKey): bigint {
   if (message ** e !== cipher) {
     throw new Error('c is not an exact e-th power, so m^e >= n');
   }
+
   return message;
 }
 
@@ -54,6 +55,7 @@ function smallFactorAttack(cipher: bigint, { e, n }: PublicKey): bigint {
   const q = n / p;
   console.log(`p = ${p} (${bitLength(p)} bits)`);
   console.log(`q = ${q} (${bitLength(q)} bits)`);
+
   return decrypt(cipher, { d: privateExponent(e, p, q), n });
 }
 
@@ -63,6 +65,7 @@ function removePkcs1v15Padding(block: Uint8Array): Uint8Array {
   if (block[0] !== 0x02 || separatorIndex === -1 || paddingLength < 8) {
     throw new Error('Invalid RSAES-PKCS1-v1_5 padding');
   }
+
   return block.subarray(separatorIndex + 1);
 }
 
