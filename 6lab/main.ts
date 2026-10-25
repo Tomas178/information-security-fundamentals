@@ -107,16 +107,20 @@ const paddedBlock = intToBytes(decrypt(c5, { d: d5, n: n5 }));
 const fifthTaskText = bytesToString(removePkcs1v15Padding(paddedBlock));
 console.log(`Decrypted text: "${fifthTaskText}"\n`);
 
+const answers: [string, bigint | string][] = [
+  ['p reikšmė', keys.p],
+  ['q reikšmė', keys.q],
+  ['(e, n)', `(${keys.e}, ${keys.n})`],
+  ['(d, n)', `(${keys.d}, ${keys.n})`],
+  ['Šifras', nameCipher],
+  ['Atšifruotas tekstas', thirdTaskText],
+  ['Atšifruotas tekstas', fourthTaskText],
+  ['Atšifruotas tekstas', fifthTaskText],
+];
+
 console.log('Atsakymas:');
 console.log(
-  [
-    keys.p,
-    keys.q,
-    `(${keys.e}, ${keys.n})`,
-    `(${keys.d}, ${keys.n})`,
-    nameCipher,
-    thirdTaskText,
-    fourthTaskText,
-    fifthTaskText,
-  ].join('\n')
+  answers
+    .map(([label, value], index) => `${index + 1}. ${label}: ${value}`)
+    .join('\n')
 );
