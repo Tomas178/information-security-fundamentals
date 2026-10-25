@@ -1,20 +1,12 @@
-import {
-  isProbablePrime,
-  modInverse,
-  modPow,
-  randomBigInt,
-} from './big-int-math.js';
+import { modInv, modPow, prime } from 'bigint-crypto-utils';
+import { bitLength } from './pagalbines-funkcijos.js';
 import { PrivateKey, PublicKey, RsaKeys } from './interfaces.js';
 
-// Slide 7: with a prime e, choosing p and q so that p mod e != 1 keeps e and
-// phi(n) = (p - 1)(q - 1) coprime. The top two bits make n exactly 2 * bits.
-function generatePrime(bits: number, e: bigint): bigint {
-  const topTwoBits = 3n << BigInt(bits - 2);
-
+async function generatePrime(bits: number, e: bigint): Promise<bigint> {
   while (true) {
-    const candidate = randomBigInt(bits) | topTwoBits | 1n;
-    if (candidate % e !== 1n && isProbablePrime(candidate)) {
-      return candidate;
+    const num = await prime(bits, 40);
+    if (num % e !== 1n) {
+      return num;
     }
   }
 }
@@ -24,15 +16,19 @@ export function eulerFunction(p: bigint, q: bigint): bigint {
 }
 
 export function privateExponent(e: bigint, p: bigint, q: bigint): bigint {
-  return modInverse(e, eulerFunction(p, q));
+  return modInv(e, eulerFunction(p, q));
 }
 
-export function rsaGenerator(e: bigint, primeBits = 256): RsaKeys {
-  const p = generatePrime(primeBits, e);
-  let q = generatePrime(primeBits, e);
-  while (q === p) {
-    q = generatePrime(primeBits, e);
-  }
+export async function rsaGenerator(
+  e: bigint,
+  primeBits = 256
+): Promise<RsaKeys> {
+  let p: bigint;
+  let q: bigint;
+  do {
+    p = await generatePrime(primeBits, e);
+    q = await generatePrime(primeBits, e);
+  } while (p === q || bitLength(p * q) !== 2 * primeBits);
 
   return { p, q, n: p * q, e, d: privateExponent(e, p, q) };
 }

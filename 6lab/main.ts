@@ -41,8 +41,6 @@ function parseVariant(fileContent: string): Map<string, bigint[][]> {
   return sections;
 }
 
-// With m^e < n the power is never reduced modulo n, so c = m^e holds over the
-// integers and m is the exact e-th root of c.
 function smallMessageAttack(cipher: bigint, { e }: PublicKey): bigint {
   const message = integerRoot(cipher, e);
   if (message ** e !== cipher) {
@@ -59,11 +57,6 @@ function smallFactorAttack(cipher: bigint, { e, n }: PublicKey): bigint {
   return decrypt(cipher, { d: privateExponent(e, p, q), n });
 }
 
-// PM = 0x00 || 0x02 || PS || 0x00 || m (slide 9). The leading 0x00 is lost when
-// the decrypted integer is turned into bytes, so the block starts at 0x02. Its
-// length is not compared with k: in variant 7 PS is one byte longer than
-// k - l - 3 (l seems to be counted in characters, not UTF-8 bytes), so the
-// block fills all k bytes and has no room for the leading 0x00 anyway.
 function removePkcs1v15Padding(block: Uint8Array): Uint8Array {
   const separatorIndex = block.indexOf(0x00, 1);
   const paddingLength = separatorIndex - 1;
@@ -83,7 +76,7 @@ const [[e4, n4], [c4]] = variant.get('4')!;
 const [[d5, n5], [c5]] = variant.get('5')!;
 
 console.log(`1. Generating RSA keys with e = ${e1}`);
-const keys = rsaGenerator(e1);
+const keys = await rsaGenerator(e1);
 console.log(
   `p: ${bitLength(keys.p)} bits, q: ${bitLength(keys.q)} bits, n: ${bitLength(keys.n)} bits\n`
 );
