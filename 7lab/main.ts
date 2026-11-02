@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { readFile, writeFile } from 'node:fs/promises';
 import { PrivateKey, PublicKey } from '../6lab/interfaces.js';
-import { decrypt, encrypt } from '../6lab/rsa-generator.js';
+import { decrypt } from '../6lab/rsa-generator.js';
 import { bytesToInt, intToBytes } from './pagalbines_funkcijos.js';
 
 const NAME = 'Tomas Petronis';
