@@ -1,21 +1,4 @@
 import { gcd } from 'bigint-crypto-utils';
-import { bitLength } from './pagalbines-funkcijos.js';
-
-export function integerRoot(value: bigint, degree: bigint): bigint {
-  let low = 0n;
-  let high = 1n << (BigInt(bitLength(value)) / degree + 1n);
-
-  while (low < high) {
-    const middle = (low + high + 1n) / 2n;
-    if (middle ** degree <= value) {
-      low = middle;
-    } else {
-      high = middle - 1n;
-    }
-  }
-
-  return low;
-}
 
 export function pollardRho(n: bigint): bigint {
   if (n % 2n === 0n) {

@@ -1,7 +1,7 @@
 import { generatePrimeSync } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { modInv, modPow } from 'bigint-crypto-utils';
-import { integerRoot } from '../6lab/big-int-math.js';
+import { sqrt } from 'extra-bigint';
 
 type VariantSection = Record<string, bigint>;
 
@@ -27,7 +27,7 @@ function diffieHellmanSecret({ g, p, a, b }: VariantSection): bigint {
 }
 
 function ceilSquareRoot(value: bigint): bigint {
-  const root = integerRoot(value, 2n);
+  const root = sqrt(value)!;
 
   return root * root < value ? root + 1n : root;
 }

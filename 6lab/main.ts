@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
-import { integerRoot, pollardRho } from './big-int-math.js';
+import { root } from 'extra-bigint';
+import { pollardRho } from './big-int-math.js';
 import {
   bitLength,
   bytesToString,
@@ -43,7 +44,7 @@ function parseVariant(fileContent: string): Map<string, bigint[][]> {
 }
 
 function smallMessageAttack(cipher: bigint, { e }: PublicKey): bigint {
-  const message = integerRoot(cipher, e);
+  const message = root(cipher, e)!;
   if (message ** e !== cipher) {
     throw new Error('c is not an exact e-th power, so m^e >= n');
   }
