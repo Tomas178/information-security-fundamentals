@@ -48,7 +48,7 @@ console.log(
   ].join('\n')
 );
 
-const answers: [string, bigint | string][] = [
+const answers = [
   ['Sertifikato piršto antspaudas', fingerprint.toString('hex')],
   ['Piršto antspaudo parašas', fingerprintSignature],
   [
