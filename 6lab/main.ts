@@ -17,6 +17,7 @@ import { PublicKey } from './interfaces.js';
 
 const NAME = 'Tomas Petronis';
 
+// Ši funkcija sugeneruota buvo su dirbtiniu intelektu
 function parseVariant(fileContent: string): Map<string, bigint[][]> {
   const sections = new Map<string, bigint[][]>();
   let currentSection: bigint[][] = [];
