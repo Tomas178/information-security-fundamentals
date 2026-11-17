@@ -2,23 +2,10 @@ import { generatePrimeSync } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { modInv, modPow } from 'bigint-crypto-utils';
 import { sqrt } from 'extra-bigint';
-
-type VariantSection = Record<string, bigint>;
-
-// Ši funkcija sugeneruota buvo su dirbtiniu intelektu
-function parseVariant(fileContent: string): VariantSection[] {
-  return fileContent
-    .split(/^\s*\d+\.\s*$/m)
-    .slice(1)
-    .map((section) =>
-      Object.fromEntries(
-        [...section.matchAll(/(\w+)\s*=\s*(\d+)/g)].map(([, name, value]) => [
-          name,
-          BigInt(value),
-        ])
-      )
-    );
-}
+import {
+  parseDiffieHellmanVariant,
+  type VariantSection,
+} from '../common/variant/parse-diffie-hellman-variant.js';
 
 function diffieHellmanSecret({ g, p, a, b }: VariantSection): bigint {
   const serverPublicKey = modPow(g, b, p);
@@ -75,7 +62,8 @@ function generatePrimeWithGenerator(bits: number, g: bigint): bigint {
 
 const variantFilePath = new URL('./7.txt', import.meta.url);
 const variantFile = await readFile(variantFilePath, { encoding: 'utf-8' });
-const [keyExchange, discreteLogarithm] = parseVariant(variantFile);
+const [keyExchange, discreteLogarithm] =
+  parseDiffieHellmanVariant(variantFile);
 
 const answers = [
   ['Paslaptis', diffieHellmanSecret(keyExchange)],

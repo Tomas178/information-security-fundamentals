@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { root } from 'extra-bigint';
+import { parseRsaVariant } from '../common/variant/parse-rsa-variant.js';
 import { pollardRho } from './big-int-math.js';
 import {
   bitLength,
@@ -17,31 +18,6 @@ import {
 import { PublicKey } from './interfaces.js';
 
 const NAME = 'Tomas Petronis';
-
-// Ši funkcija sugeneruota buvo su dirbtiniu intelektu
-function parseVariant(fileContent: string): Map<string, bigint[][]> {
-  const sections = new Map<string, bigint[][]>();
-  let currentSection: bigint[][] = [];
-
-  const lines = fileContent
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0);
-
-  for (const line of lines) {
-    if (/^\d+\.$/.test(line)) {
-      currentSection = [];
-      sections.set(line.slice(0, -1), currentSection);
-      continue;
-    }
-
-    currentSection.push(
-      line.replace(/[(),]/g, ' ').trim().split(/\s+/).map(BigInt)
-    );
-  }
-
-  return sections;
-}
 
 function smallMessageAttack(cipher: bigint, { e }: PublicKey): bigint {
   const message = root(cipher, e)!;
@@ -73,7 +49,7 @@ function removePkcs1v15Padding(block: Uint8Array): Uint8Array {
 
 const variantFilePath = new URL('./7.txt', import.meta.url);
 const variantFile = await readFile(variantFilePath, { encoding: 'utf-8' });
-const variant = parseVariant(variantFile);
+const variant = parseRsaVariant(variantFile);
 
 const [[e1]] = variant.get('1')!;
 const [[e3, n3], [c3]] = variant.get('3')!;
